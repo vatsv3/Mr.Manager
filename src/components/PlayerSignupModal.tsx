@@ -18,13 +18,6 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>('');
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>('CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(['CM', 'LW']);
-  const [selectedTraits, setSelectedTraits] = useState<string[]>(['playmaker', 'dribbler']);
-
-  const toggleTrait = (traitId: string) => {
-    setSelectedTraits(prev =>
-      prev.includes(traitId) ? prev.filter(t => t !== traitId) : [...prev, traitId]
-    );
-  };
 
   const toggleSecondaryPosition = (pos: FootballPosition) => {
     if (pos === primaryPosition) return; // Cannot be primary and secondary at same time
@@ -69,7 +62,7 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
       primaryPosition,
       secondaryPosition: secondaryPositions[0] || 'CM',
       secondaryPositions,
-      traits: selectedTraits,
+      traits: [],
     });
 
     setCurrentUser(created);
@@ -256,35 +249,6 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
                     }`}
                   >
                     {pos}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Football Traits Selection */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-zinc-400 block">
-              Traits ({selectedTraits.length} selected)
-            </label>
-            <div className="grid grid-cols-2 gap-1 max-h-28 overflow-y-auto pr-0.5">
-              {AVAILABLE_TRAITS.map(t => {
-                const isChecked = selectedTraits.includes(t.id);
-                return (
-                  <button
-                    type="button"
-                    key={t.id}
-                    onClick={() => toggleTrait(t.id)}
-                    className={`p-1.5 rounded-lg border text-left flex items-center space-x-1.5 transition ${
-                      isChecked
-                        ? 'bg-zinc-800 border-zinc-600 text-zinc-100'
-                        : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/40'
-                    }`}
-                  >
-                    <span className="text-xs">{t.icon}</span>
-                    <div className="truncate">
-                      <p className="font-medium text-[11px] truncate leading-tight">{t.name}</p>
-                    </div>
                   </button>
                 );
               })}

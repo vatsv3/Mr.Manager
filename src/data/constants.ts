@@ -23,20 +23,24 @@ export const ALL_POSITIONS: FootballPosition[] = [
 ];
 
 export const AVAILABLE_TRAITS: PlayerTrait[] = [
-  { id: 'speedster', name: 'Speedster', icon: '⚡', description: 'Explosive pace on the counter & tracking back', category: 'physical' },
-  { id: 'playmaker', name: 'Playmaker', icon: '🎯', description: 'Visionary passing, creates key chances', category: 'technical' },
-  { id: 'finisher', name: 'Clinical Finisher', icon: '⚽', description: 'Deadly 1v1 conversion inside the box', category: 'technical' },
-  { id: 'rock_defender', name: 'Solid Rock', icon: '🛡️', description: 'Unbeatable in ground duels & positioning', category: 'mental' },
-  { id: 'box_to_box', name: 'Box-to-Box', icon: '🏃', description: 'Relentless stamina covering both boxes', category: 'physical' },
-  { id: 'dribbler', name: 'Maestro Dribbler', icon: '🪄', description: 'Tight space control and skill moves', category: 'technical' },
-  { id: 'aerial_threat', name: 'Aerial Threat', icon: '🦅', description: 'Dominant jumping reach on set pieces', category: 'physical' },
-  { id: 'ball_winner', name: 'Ball Winner', icon: '🧲', description: 'Aggressive interceptions and pressing', category: 'mental' },
-  { id: 'dead_ball', name: 'Free Kick Specialist', icon: '🔮', description: 'Dangerous curling free kicks & corners', category: 'technical' },
-  { id: 'long_shot', name: 'Long Range Cannon', icon: '🚀', description: 'Powerful shooting from outside the box', category: 'technical' },
-  { id: 'sweeper_gk', name: 'Sweeper Keeper', icon: '🧤', description: 'Rushes off line, excellent distribution', category: 'goalkeeping' },
-  { id: 'cat_reflexes', name: 'Cat Reflexes', icon: '🐆', description: 'Acrobatic diving and point-blank stops', category: 'goalkeeping' },
-  { id: 'vocal_leader', name: 'Vocal Leader', icon: '📢', description: 'Organizes defensive line and boosts morale', category: 'mental' },
-  { id: 'engine', name: 'Endless Engine', icon: '🔋', description: 'Never tires, high-intensity sprint bursts', category: 'physical' },
+  { id: 'finesse_expert', name: 'Finesse Expert', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_POWER_FINESSE_2.png', description: 'Finesse Expert Playstyle', category: 'technical' },
+  { id: 'clinical_finisher', name: 'Clinical Finisher', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_CLINICAL_FINISHER_2.png', description: 'Clinical Finisher Playstyle', category: 'technical' },
+  { id: 'power_shot', name: 'Power Shot', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_POWER_SHOT_2.png', description: 'Power Shot Playstyle', category: 'technical' },
+  { id: 'penalty_expert', name: 'Penalty Expert', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_PENALTY_EXPERT_2.png', description: 'Penalty Expert Playstyle', category: 'technical' },
+  { id: 'chip_shot', name: 'Chip Shot', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_CHIP_MASTER_2.png', description: 'Chip Shot Playstyle', category: 'technical' },
+  { id: 'tiki_taka', name: 'Tiki Taka', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_TIKI_TAKA_2.png', description: 'Tiki Taka Playstyle', category: 'technical' },
+  { id: 'bullet_pass', name: 'Bullet Pass', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_BULLET_PASS_2.png', description: 'Bullet Pass Playstyle', category: 'technical' },
+  { id: 'whipped_cross', name: 'Whipped Cross', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_WHIPPED_CROSSER_2.png', description: 'Whipped Cross Playstyle', category: 'technical' },
+  { id: 'rapid', name: 'Rapid', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_SPEED_DRIBBLER_2.png', description: 'Rapid Playstyle', category: 'physical' },
+  { id: 'trickster', name: 'Trickster', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_TRICKSTER_2.png', description: 'Trickster Playstyle', category: 'technical' },
+  { id: 'anticipate', name: 'Anticipate', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_STAND_TACKLE_MASTER_2.png', description: 'Anticipate Playstyle', category: 'mental' },
+  { id: 'guardian', name: 'Guardian', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_HARD_TACKLE_MASTER_2.png', description: 'Guardian Playstyle', category: 'mental' },
+  { id: 'accelerator', name: 'Accelerator', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_ACCELERATOR_2.png', description: 'Accelerator Playstyle', category: 'physical' },
+  { id: 'relentless', name: 'Relentless', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_RELENTLESS_STAMINA_2.png', description: 'Relentless Playstyle', category: 'physical' },
+  { id: 'bruiser', name: 'Bruiser', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_INTIMIDATOR_2.png', description: 'Bruiser Playstyle', category: 'mental' },
+  { id: 'precision_header', name: 'Precision Header', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_AERIAL_MASTER_2.png', description: 'Precision Header Playstyle', category: 'physical' },
+  { id: 'deflector', name: 'Deflector', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_DEFLECTOR_2.png', description: 'Deflector Playstyle', category: 'goalkeeping' },
+  { id: 'rush_out', name: 'Rush Out', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_SUPER_RUSH_2.png', description: 'Rush Out Playstyle', category: 'goalkeeping' },
 ];
 
 export const DEFAULT_AVATAR =

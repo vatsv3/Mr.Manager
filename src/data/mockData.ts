@@ -11,7 +11,7 @@ export const INITIAL_PLAYERS: Player[] = [
     primaryPosition: 'GK',
     secondaryPosition: 'CB',
     secondaryPositions: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM'],
-    traits: ['free_kick', 'long_shot', 'sweeper_gk', 'cat_reflexes', 'vocal_leader', 'engine'],
+    traits: ['deflector', 'rush_out', 'guardian', 'anticipate', 'bullet_pass', 'relentless'],
     jerseyNumber: 1,
     nickname: 'The Wall & Captain',
     preferredFoot: 'Right',

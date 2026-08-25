@@ -7,6 +7,8 @@ import { MatchList } from './components/MatchList';
 import { RatingWindow } from './components/RatingWindow';
 import { Leaderboard } from './components/Leaderboard';
 import { LogsAudit } from './components/LogsAudit';
+import { RosterView } from './components/RosterView';
+import { PlayerEditModal } from './components/PlayerEditModal';
 import { PlayerProfileModal } from './components/PlayerProfileModal';
 import { PlayerSignupModal } from './components/PlayerSignupModal';
 import { CreateMatchModal } from './components/CreateMatchModal';
@@ -15,7 +17,7 @@ import { AuthLandingView } from './components/AuthLandingView';
 import { Database, Smartphone, Monitor } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { currentUser, activeTab, selectedPlayerId, setSelectedPlayerId } = useApp();
+  const { currentUser, activeTab, selectedPlayerId, setSelectedPlayerId, editPlayerId, setEditPlayerId } = useApp();
 
   const [signupModalOpen, setSignupModalOpen] = useState(false);
   const [createMatchModalOpen, setCreateMatchModalOpen] = useState(false);
@@ -65,6 +67,7 @@ const MainLayout: React.FC = () => {
           {activeTab === 'ratings' && <RatingWindow />}
           {activeTab === 'stats' && <Leaderboard />}
           {activeTab === 'logs' && <LogsAudit />}
+          {activeTab === 'players' && <RosterView />}
         </main>
 
         {/* Bottom Mobile Navigation */}
@@ -79,7 +82,15 @@ const MainLayout: React.FC = () => {
         />
       )}
 
+      
+      {editPlayerId && (
+        <PlayerEditModal
+          playerId={editPlayerId}
+          onClose={() => setEditPlayerId(null)}
+        />
+      )}
       {signupModalOpen && (
+
         <PlayerSignupModal onClose={() => setSignupModalOpen(false)} />
       )}
 

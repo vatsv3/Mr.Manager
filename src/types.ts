@@ -46,6 +46,7 @@ export interface Player {
   traits: string[]; // trait IDs or names
   jerseyNumber?: number;
   nickname?: string;
+  baseRating?: number;
   preferredFoot?: 'Left' | 'Right' | 'Both';
   createdAt: string;
 }

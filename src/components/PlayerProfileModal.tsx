@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TimeFilter } from '../types';
 import { POSITION_INFO, AVAILABLE_TRAITS } from '../data/constants';
+import { EditPlayerModal } from './EditPlayerModal';
 import {
   Star,
   Award,
   Calendar,
   X,
   Trophy,
+  Edit3,
 } from 'lucide-react';
 
 interface PlayerProfileModalProps {
@@ -16,9 +18,10 @@ interface PlayerProfileModalProps {
 }
 
 export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ playerId, onClose }) => {
-  const { getPlayerAggregatedStats, timeFilter, matches } = useApp();
+  const { getPlayerAggregatedStats, timeFilter, matches, isAdmin } = useApp();
 
   const [modalTimeFilter, setModalTimeFilter] = useState<TimeFilter>(timeFilter);
+  const [isEditing, setIsEditing] = useState(false);
   const stats = getPlayerAggregatedStats(playerId, modalTimeFilter);
 
   if (!stats) return null;
@@ -36,101 +39,127 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ playerId
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-4 shadow-xl max-h-[92vh] flex flex-col overflow-y-auto space-y-3.5">
-        {/* Header with Close */}
-        <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-          <span className="text-[10px] uppercase font-medium tracking-wider text-zinc-500">
-            Player Profile
-          </span>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 flex items-center justify-center transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <>
+      <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-4 shadow-xl max-h-[92vh] flex flex-col overflow-y-auto space-y-3.5">
+          {/* Header with Close & Admin Edit */}
+          <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+            <span className="text-[10px] uppercase font-medium tracking-wider text-zinc-500">
+              Player Profile
+            </span>
+            <div className="flex items-center gap-1.5">
+              {isAdmin && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1 text-[11px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-lg transition"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Edit Profile
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
 
-        {/* Player Header Card */}
-        <div className="rounded-xl p-3.5 bg-zinc-950/60 border border-zinc-800/80 space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <img
-                  src={player.photo}
-                  alt={player.name}
-                  className="w-12 h-12 rounded-xl object-cover ring-1 ring-zinc-700"
-                />
-                {player.jerseyNumber && (
-                  <span className="absolute -bottom-1 -right-1 bg-zinc-900 text-zinc-200 text-[9px] font-mono font-medium px-1 rounded border border-zinc-700">
-                    #{player.jerseyNumber}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-zinc-100">
-                  {player.name}
-                </h3>
-                {player.nickname && (
-                  <p className="text-xs text-zinc-400">"{player.nickname}"</p>
-                )}
-
-                {/* Primary & Secondary Positions */}
-                <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                  <span
-                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded text-white"
-                    style={{ backgroundColor: primaryPos?.color || '#10b981' }}
-                  >
-                    {player.primaryPosition}
-                  </span>
-                  {secondaryList.map(secPos => (
-                    <span
-                      key={secPos}
-                      className="text-[10px] font-medium px-1.5 py-0.5 rounded text-zinc-300 bg-zinc-800 border border-zinc-700"
-                    >
-                      {secPos}
+          {/* Player Header Card */}
+          <div className="rounded-xl p-3.5 bg-zinc-950/60 border border-zinc-800/80 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <img
+                    src={player.photo}
+                    alt={player.name}
+                    className="w-12 h-12 rounded-xl object-cover ring-1 ring-zinc-700"
+                  />
+                  {player.jerseyNumber && (
+                    <span className="absolute -bottom-1 -right-1 bg-zinc-900 text-zinc-200 text-[9px] font-mono font-medium px-1 rounded border border-zinc-700">
+                      #{player.jerseyNumber}
                     </span>
-                  ))}
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-1.5">
+                    {player.name}
+                    {player.preferredFoot && (
+                      <span className="text-[9px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded font-normal">
+                        {player.preferredFoot}
+                      </span>
+                    )}
+                  </h3>
+                  {player.nickname && (
+                    <p className="text-xs text-zinc-400">"{player.nickname}"</p>
+                  )}
+
+                  {/* Primary & Secondary Positions */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    <span
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded text-white"
+                      style={{ backgroundColor: primaryPos?.color || '#10b981' }}
+                    >
+                      {player.primaryPosition}
+                    </span>
+                    {secondaryList.map(secPos => (
+                      <span
+                        key={secPos}
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded text-zinc-300 bg-zinc-800 border border-zinc-700"
+                      >
+                        {secPos}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Avg Rating Badge */}
-            <div className="flex flex-col items-end">
-              <div className="flex items-center space-x-1 bg-zinc-800/80 px-2.5 py-1 rounded-lg border border-zinc-700">
-                <Star className="w-3.5 h-3.5 text-zinc-300 fill-zinc-300" />
-                <span className="text-sm font-semibold text-zinc-100">
-                  {stats.avgRating > 0 ? stats.avgRating : '-'}
-                </span>
-                <span className="text-[10px] text-zinc-500">/10</span>
-              </div>
-              <span className="text-[9px] text-zinc-500 mt-0.5">Average</span>
-            </div>
-          </div>
-
-          {/* Traits Chips */}
-          <div className="pt-2 border-t border-zinc-800/80">
-            <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider block mb-1.5">
-              Traits & Attributes
-            </span>
-            <div className="flex flex-wrap gap-1">
-              {playerTraitObjs.length === 0 ? (
-                <span className="text-xs text-zinc-500 italic">No traits selected</span>
-              ) : (
-                playerTraitObjs.map(t => (
-                  <div
-                    key={t.id}
-                    className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-xs text-zinc-300"
-                  >
-                    <span className="text-xs">{t.icon}</span>
-                    <span className="text-[11px] font-medium">{t.name}</span>
+              {/* Ratings Badges */}
+              <div className="flex flex-col items-end gap-1">
+                {player.baseRating !== undefined && (
+                  <div className="flex items-center space-x-1 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    <span className="text-xs font-bold text-amber-400">
+                      {player.baseRating.toFixed(1)}
+                    </span>
+                    <span className="text-[9px] text-amber-500/80">Base</span>
                   </div>
-                ))
-              )}
+                )}
+
+                <div className="flex items-center space-x-1 bg-zinc-800/80 px-2.5 py-1 rounded-lg border border-zinc-700">
+                  <Star className="w-3.5 h-3.5 text-zinc-300 fill-zinc-300" />
+                  <span className="text-sm font-semibold text-zinc-100">
+                    {stats.avgRating > 0 ? stats.avgRating : '-'}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">/10</span>
+                </div>
+                <span className="text-[9px] text-zinc-500">Match Avg</span>
+              </div>
+            </div>
+
+            {/* FC Mobile Playstyles */}
+            <div className="pt-2 border-t border-zinc-800/80">
+              <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider block mb-1.5">
+                FC Mobile Playstyles ({playerTraitObjs.length})
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {playerTraitObjs.length === 0 ? (
+                  <span className="text-xs text-zinc-500 italic">No playstyles assigned yet</span>
+                ) : (
+                  playerTraitObjs.map(t => (
+                    <div
+                      key={t.id}
+                      className="flex items-center space-x-1.5 px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/80 text-xs text-zinc-200"
+                    >
+                      <img src={t.icon} alt={t.name} className="w-5 h-5 object-contain shrink-0" />
+                      <span className="text-[11px] font-medium">{t.name}</span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Time Period Filter */}
         <div className="space-y-1">
@@ -295,5 +324,12 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ playerId
         </div>
       </div>
     </div>
-  );
+    {isEditing && (
+      <EditPlayerModal
+        player={player}
+        onClose={() => setIsEditing(false)}
+      />
+    )}
+  </>
+);
 };

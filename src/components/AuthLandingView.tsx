@@ -50,7 +50,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>('');
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>('CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(['CM', 'LW']);
-  const [selectedTraits, setSelectedTraits] = useState<string[]>(['playmaker', 'dribbler']);
+  const selectedTraits: string[] = [];
 
   // Listen for existing Firebase Auth session
   useEffect(() => {
@@ -78,13 +78,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
     return () => unsub();
   }, [players, setCurrentUser, name]);
 
-  const toggleTrait = (traitId: string) => {
-    setSelectedTraits(prev =>
-      prev.includes(traitId) ? prev.filter(t => t !== traitId) : [...prev, traitId]
-    );
-  };
-
-  const toggleSecondaryPosition = (pos: FootballPosition) => {
+    const toggleSecondaryPosition = (pos: FootballPosition) => {
     if (pos === primaryPosition) return;
     setSecondaryPositions(prev =>
       prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos]
@@ -631,33 +625,6 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
               </div>
 
               {/* Football Traits Selection */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-400 block">
-                  Traits ({selectedTraits.length} selected)
-                </label>
-                <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto pr-0.5">
-                  {AVAILABLE_TRAITS.map(t => {
-                    const isChecked = selectedTraits.includes(t.id);
-                    return (
-                      <button
-                        type="button"
-                        key={t.id}
-                        onClick={() => toggleTrait(t.id)}
-                        className={`p-1.5 rounded-lg border text-left flex items-center space-x-1.5 transition ${
-                          isChecked
-                            ? 'bg-zinc-800 border-zinc-600 text-zinc-100'
-                            : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/40'
-                        }`}
-                      >
-                        <span className="text-xs">{t.icon}</span>
-                        <div className="truncate">
-                          <p className="font-medium text-[11px] truncate leading-tight">{t.name}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Submit */}

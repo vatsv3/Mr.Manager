@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, LayoutGrid, Star, Trophy, ClipboardList } from 'lucide-react';
+import { Calendar, LayoutGrid, Star, Trophy, ClipboardList, Users } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
   const { activeTab, setActiveTab, activeRatingMatches } = useApp();
@@ -14,6 +14,7 @@ export const BottomNav: React.FC = () => {
       icon: Star,
       badge: activeRatingMatches.length > 0 ? activeRatingMatches.length : undefined,
     },
+    { id: 'players' as const, label: 'Roster', icon: Users },
     { id: 'stats' as const, label: 'Rankings', icon: Trophy },
     { id: 'logs' as const, label: 'Logs', icon: ClipboardList },
   ];

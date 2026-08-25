@@ -33,7 +33,7 @@ interface AppContextType {
   ratingLogs: RatingLog[];
   currentUser: Player | null;
   isAdmin: boolean;
-  activeTab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs';
+  activeTab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players';
   selectedMatchId: string | null;
   selectedPlayerId: string | null;
   timeFilter: TimeFilter;
@@ -42,7 +42,7 @@ interface AppContextType {
   setCurrentUser: (player: Player | null) => void;
   logout: () => Promise<void>;
   setIsAdmin: (isAdmin: boolean) => void;
-  setActiveTab: (tab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs') => void;
+  setActiveTab: (tab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players') => void;
   setSelectedMatchId: (id: string | null) => void;
   setSelectedPlayerId: (id: string | null) => void;
   setTimeFilter: (filter: TimeFilter) => void;
@@ -154,9 +154,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  const [activeTab, setActiveTab] = useState<'matches' | 'pitch' | 'ratings' | 'stats' | 'logs'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players'>('matches');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(matches[0]?.id || null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [editPlayerId, setEditPlayerId] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
 
   // Initialize Firestore listeners & initial seeding
