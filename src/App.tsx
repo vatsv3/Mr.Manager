@@ -12,16 +12,13 @@ import { PlayerEditModal } from './components/PlayerEditModal';
 import { PlayerProfileModal } from './components/PlayerProfileModal';
 import { PlayerSignupModal } from './components/PlayerSignupModal';
 import { CreateMatchModal } from './components/CreateMatchModal';
-import { SupabaseExportModal } from './components/SupabaseExportModal';
 import { AuthLandingView } from './components/AuthLandingView';
-import { Database, Smartphone, Monitor } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { currentUser, activeTab, selectedPlayerId, setSelectedPlayerId, editPlayerId, setEditPlayerId } = useApp();
 
   const [signupModalOpen, setSignupModalOpen] = useState(false);
   const [createMatchModalOpen, setCreateMatchModalOpen] = useState(false);
-  const [supabaseModalOpen, setSupabaseModalOpen] = useState(false);
   const [isPhoneFrame, setIsPhoneFrame] = useState(false);
   // Only valid authenticated accounts can access the app
   if (!currentUser) {
@@ -43,22 +40,6 @@ const MainLayout: React.FC = () => {
           onOpenNewPlayerModal={() => setSignupModalOpen(true)}
           onOpenNewMatchModal={() => setCreateMatchModalOpen(true)}
         />
-
-        {/* Mobile Quick Action Strip */}
-        <div className="px-4 pt-2.5 flex items-center justify-between text-xs lg:hidden">
-          <button
-            onClick={() => setSupabaseModalOpen(true)}
-            className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-emerald-400 font-medium bg-zinc-900/60 border border-zinc-800/80 px-2.5 py-1 rounded-lg transition"
-          >
-            <Database className="w-3 h-3 text-emerald-400" /> Supabase
-          </button>
-          <button
-            onClick={() => setSignupModalOpen(true)}
-            className="text-[11px] text-zinc-400 hover:text-zinc-200 font-medium bg-zinc-900/60 border border-zinc-800/80 px-2.5 py-1 rounded-lg transition"
-          >
-            + Register Player
-          </button>
-        </div>
 
         {/* Active Tab View */}
         <main className="flex-1">
@@ -82,7 +63,6 @@ const MainLayout: React.FC = () => {
         />
       )}
 
-      
       {editPlayerId && (
         <PlayerEditModal
           playerId={editPlayerId}
@@ -90,16 +70,11 @@ const MainLayout: React.FC = () => {
         />
       )}
       {signupModalOpen && (
-
         <PlayerSignupModal onClose={() => setSignupModalOpen(false)} />
       )}
 
       {createMatchModalOpen && (
         <CreateMatchModal onClose={() => setCreateMatchModalOpen(false)} />
-      )}
-
-      {supabaseModalOpen && (
-        <SupabaseExportModal onClose={() => setSupabaseModalOpen(false)} />
       )}
     </div>
   );
