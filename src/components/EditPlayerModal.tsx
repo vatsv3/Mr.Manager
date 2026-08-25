@@ -303,41 +303,43 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
           </div>
 
           {/* Initial Rating Assignment (Admin Only) */}
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold text-amber-300 flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                Initial Base Rating (Admin Assigned)
-              </label>
-              <span className="text-xs font-mono font-bold text-amber-400">
-                {baseRating !== '' ? `${Number(baseRating).toFixed(1)} / 10` : 'Not Set'}
-              </span>
+          {isAdmin && (
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-amber-300 flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  Initial Base Rating (Admin Assigned)
+                </label>
+                <span className="text-xs font-mono font-bold text-amber-400">
+                  {baseRating !== '' ? `${Number(baseRating).toFixed(1)} / 10` : 'Not Set'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="1.0"
+                  max="10.0"
+                  step="0.1"
+                  value={baseRating === '' ? 6.0 : baseRating}
+                  onChange={e => setBaseRating(parseFloat(e.target.value))}
+                  className="flex-1 accent-amber-400 cursor-pointer"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="0.1"
+                  value={baseRating}
+                  onChange={e => setBaseRating(e.target.value)}
+                  placeholder="6.5"
+                  className="w-16 bg-zinc-950 border border-amber-500/30 rounded-lg px-2 py-1 text-center font-mono text-amber-300 text-xs focus:outline-none"
+                />
+              </div>
+              <p className="text-[10px] text-zinc-400">
+                This sets the player's initial rating before or alongside dynamic match ratings.
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min="1.0"
-                max="10.0"
-                step="0.1"
-                value={baseRating === '' ? 6.0 : baseRating}
-                onChange={e => setBaseRating(parseFloat(e.target.value))}
-                className="flex-1 accent-amber-400 cursor-pointer"
-              />
-              <input
-                type="number"
-                min="1"
-                max="10"
-                step="0.1"
-                value={baseRating}
-                onChange={e => setBaseRating(e.target.value)}
-                placeholder="6.5"
-                className="w-16 bg-zinc-950 border border-amber-500/30 rounded-lg px-2 py-1 text-center font-mono text-amber-300 text-xs focus:outline-none"
-              />
-            </div>
-            <p className="text-[10px] text-zinc-400">
-              This sets the player's initial rating before or alongside dynamic match ratings.
-            </p>
-          </div>
+          )}
 
           {/* Primary Position Selection */}
           <div className="space-y-1">
@@ -393,37 +395,39 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
             </div>
           </div>
 
-          {/* Assign Level 2 FC Mobile Playstyles */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold text-emerald-400 block">
-                Assign FC Mobile Playstyles (Level 2) — ({selectedTraits.length} assigned)
-              </label>
+          {/* Assign Level 2 FC Mobile Playstyles (Admin Only) */}
+          {isAdmin && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-emerald-400 block">
+                  Assign FC Mobile Playstyles (Level 2) — ({selectedTraits.length} assigned)
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {AVAILABLE_TRAITS.map(t => {
+                  const isChecked = selectedTraits.includes(t.id) || selectedTraits.includes(t.name);
+                  return (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => toggleTrait(t.id)}
+                      className={`p-2 rounded-lg border text-left flex items-center space-x-2 transition ${
+                        isChecked
+                          ? 'bg-emerald-950/30 border-emerald-500/60 text-emerald-200 shadow-sm'
+                          : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/40'
+                      }`}
+                    >
+                      <img src={t.icon} alt={t.name} className="w-6 h-6 object-contain shrink-0" />
+                      <div className="truncate">
+                        <p className="font-medium text-[11px] truncate leading-tight">{t.name}</p>
+                        <span className="text-[9px] text-zinc-500 uppercase">{t.category}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
-              {AVAILABLE_TRAITS.map(t => {
-                const isChecked = selectedTraits.includes(t.id) || selectedTraits.includes(t.name);
-                return (
-                  <button
-                    type="button"
-                    key={t.id}
-                    onClick={() => toggleTrait(t.id)}
-                    className={`p-2 rounded-lg border text-left flex items-center space-x-2 transition ${
-                      isChecked
-                        ? 'bg-emerald-950/30 border-emerald-500/60 text-emerald-200 shadow-sm'
-                        : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/40'
-                    }`}
-                  >
-                    <img src={t.icon} alt={t.name} className="w-6 h-6 object-contain shrink-0" />
-                    <div className="truncate">
-                      <p className="font-medium text-[11px] truncate leading-tight">{t.name}</p>
-                      <span className="text-[9px] text-zinc-500 uppercase">{t.category}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* Admin Role Grant */}
           {isAdmin && (

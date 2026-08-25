@@ -113,8 +113,28 @@ export async function uploadPlayerAvatar(
     throw new Error(validation.error || 'Invalid image file');
   }
 
-  // 1. Optimize & downsample image client-side first
-  const { blob, dataUrl } = await optimizeAvatarImage(file, 360, 0.82);
+  // 1. Optimize & downsample image client-side first (with 3 second timeout)
+  let blob: Blob;
+  let dataUrl: string;
+  try {
+    const optimizePromise = optimizeAvatarImage(file, 360, 0.82);
+    const timeoutPromise = new Promise<{ blob: Blob; dataUrl: string }>((_, reject) => {
+      setTimeout(() => reject(new Error('Optimization timeout')), 3000);
+    });
+    const result = await Promise.race([optimizePromise, timeoutPromise]);
+    blob = result.blob;
+    dataUrl = result.dataUrl;
+  } catch (optError) {
+    console.warn('[ImageStorage] Optimization failed or timed out. Falling back to original file.', optError);
+    blob = file;
+    // We need a dataUrl for fallback if upload fails, so try reading the raw file
+    dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => reject(new Error('Failed to read file as data url'));
+      r.readAsDataURL(file);
+    });
+  }
 
   // 2. Attempt upload to Firebase Cloud Storage
   try {
@@ -123,15 +143,21 @@ export async function uploadPlayerAvatar(
     const storagePath = `avatars/${cleanPrefix}_${timestamp}.jpg`;
     const storageRef = ref(storage, storagePath);
 
-    const snapshot = await uploadBytes(storageRef, blob, {
+    const uploadPromise = uploadBytes(storageRef, blob, {
       contentType: 'image/jpeg',
       customMetadata: {
         uploadedAt: new Date().toISOString(),
         playerId: playerIdOrPrefix,
       },
+    }).then(snapshot => getDownloadURL(snapshot.ref));
+
+    // Force a 5-second timeout on cloud storage upload to prevent hanging
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error('Upload timeout - falling back to data URL')), 5000);
     });
 
-    const downloadUrl = await getDownloadURL(snapshot.ref);
+    const downloadUrl = await Promise.race([uploadPromise, timeoutPromise]);
+
     console.log('[Cloud Storage] Avatar uploaded successfully:', downloadUrl);
     return {
       url: downloadUrl,
