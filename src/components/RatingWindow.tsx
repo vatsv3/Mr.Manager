@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { POSITION_INFO } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 import {
   Star,
   Award,
@@ -358,19 +359,13 @@ export const RatingWindow: React.FC = () => {
                     onClick={() => setSelectedPlayerId(player.id)}
                     className="flex items-center space-x-2.5 cursor-pointer"
                   >
-                    <div className="relative">
-                      <img
-                        src={player.photo}
-                        alt={player.name}
-                        className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-700"
-                      />
-                      <span
-                        className="absolute -bottom-0.5 -right-0.5 text-[7px] font-semibold px-1 rounded-full text-white"
-                        style={{ backgroundColor: posColor }}
-                      >
-                        {spot.positionCode}
-                      </span>
-                    </div>
+                    <PlayerAvatar
+                      player={player}
+                      size="sm"
+                      showBadge={true}
+                      badgePosition={spot.positionCode}
+                      className="rounded-full ring-1 ring-zinc-700"
+                    />
 
                     <div>
                       <div className="flex items-center space-x-1.5">

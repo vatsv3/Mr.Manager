@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Match } from '../types';
+import { PlayerAvatar } from './PlayerAvatar';
 import {
   Play,
   Square,
@@ -158,10 +159,11 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
         {mvpPlayer && (
           <div className="bg-zinc-900/90 border border-amber-500/30 rounded-xl p-3 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
-              <img
-                src={mvpPlayer.photo}
-                alt={mvpPlayer.name}
-                className="w-9 h-9 rounded-full object-cover ring-1 ring-amber-500/50"
+              <PlayerAvatar
+                player={mvpPlayer}
+                size="md"
+                showBadge={false}
+                className="rounded-xl ring-1 ring-amber-500/50"
               />
               <div>
                 <span className="text-[9px] font-semibold text-amber-400 uppercase">Match MOTM</span>
@@ -416,10 +418,11 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
                         className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
                         style={{ border: `2px solid ${match.teamA.kitColor}` }}
                       >
-                        <img
-                          src={player.photo}
-                          alt={player.name}
-                          className="w-full h-full object-cover"
+                        <PlayerAvatar
+                          player={player}
+                          size="sm"
+                          showBadge={false}
+                          className="w-full h-full rounded-full"
                         />
                       </div>
                       <div className="min-w-0">
@@ -500,10 +503,11 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
                         className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
                         style={{ border: `2px solid ${match.teamB.kitColor}` }}
                       >
-                        <img
-                          src={player.photo}
-                          alt={player.name}
-                          className="w-full h-full object-cover"
+                        <PlayerAvatar
+                          player={player}
+                          size="sm"
+                          showBadge={false}
+                          className="w-full h-full rounded-full"
                         />
                       </div>
                       <div className="min-w-0">

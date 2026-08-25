@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MatchFormat, FootballPosition, Player, PlayerAggregatedStats } from '../types';
 import { FORMATION_PRESETS, POSITION_INFO } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 import { X, Users, Shuffle, RotateCcw, Check, Sparkles, Scale, Award, Info, CheckSquare, Square } from 'lucide-react';
 
 interface CreateMatchModalProps {
@@ -653,10 +654,11 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
                           )}
                         </button>
 
-                        <img
-                          src={player.photo}
-                          alt={player.name}
-                          className="w-7 h-7 rounded-full object-cover ring-1 ring-zinc-700 flex-shrink-0"
+                        <PlayerAvatar
+                          player={player}
+                          size="sm"
+                          showBadge={false}
+                          className="rounded-full ring-1 ring-zinc-700 flex-shrink-0"
                         />
                         <div className="min-w-0">
                           <div className="flex items-center space-x-1.5">

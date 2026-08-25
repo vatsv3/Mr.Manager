@@ -1,22 +1,25 @@
 import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Calendar, LayoutGrid, Star, Trophy, ClipboardList, Users } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, activeRatingMatches } = useApp();
+  const { activeRatingMatches, setActiveTab } = useApp();
+  const location = useLocation();
 
   const tabs = [
-    { id: 'matches' as const, label: 'Matches', icon: Calendar },
-    { id: 'pitch' as const, label: 'Tactics', icon: LayoutGrid },
+    { path: '/matches', tabId: 'matches' as const, label: 'Matches', icon: Calendar },
+    { path: '/pitch', tabId: 'pitch' as const, label: 'Tactics', icon: LayoutGrid },
     {
-      id: 'ratings' as const,
+      path: '/ratings',
+      tabId: 'ratings' as const,
       label: 'Rate',
       icon: Star,
       badge: activeRatingMatches.length > 0 ? activeRatingMatches.length : undefined,
     },
-    { id: 'players' as const, label: 'Roster', icon: Users },
-    { id: 'stats' as const, label: 'Rankings', icon: Trophy },
-    { id: 'logs' as const, label: 'Logs', icon: ClipboardList },
+    { path: '/roster', tabId: 'players' as const, label: 'Roster', icon: Users },
+    { path: '/leaderboard', tabId: 'stats' as const, label: 'Rankings', icon: Trophy },
+    { path: '/logs', tabId: 'logs' as const, label: 'Logs', icon: ClipboardList },
   ];
 
   return (
@@ -24,11 +27,15 @@ export const BottomNav: React.FC = () => {
       <div className="max-w-md mx-auto flex items-center justify-around py-2 px-1">
         {tabs.map(tab => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive =
+            location.pathname === tab.path ||
+            (tab.path === '/matches' && location.pathname === '/');
+
           return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+            <NavLink
+              key={tab.path}
+              to={tab.path}
+              onClick={() => setActiveTab(tab.tabId)}
               className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 transition text-center ${
                 isActive
                   ? 'text-zinc-100 font-medium'
@@ -50,11 +57,12 @@ export const BottomNav: React.FC = () => {
               <span className={`text-[10px] tracking-tight mt-1 ${isActive ? 'text-zinc-200 font-medium' : 'text-zinc-500'}`}>
                 {tab.label}
               </span>
-            </button>
+            </NavLink>
           );
         })}
       </div>
     </nav>
   );
 };
+
 

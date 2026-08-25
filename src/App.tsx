@@ -1,25 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
-import { TacticalPitch } from './components/TacticalPitch';
-import { MatchList } from './components/MatchList';
-import { RatingWindow } from './components/RatingWindow';
-import { Leaderboard } from './components/Leaderboard';
-import { LogsAudit } from './components/LogsAudit';
-import { RosterView } from './components/RosterView';
+import { MatchesPage } from './pages/MatchesPage';
+import { TacticsPage } from './pages/TacticsPage';
+import { RatingsPage } from './pages/RatingsPage';
+import { RosterPage } from './pages/RosterPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
+import { LogsPage } from './pages/LogsPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { PlayerEditModal } from './components/PlayerEditModal';
 import { PlayerProfileModal } from './components/PlayerProfileModal';
 import { PlayerSignupModal } from './components/PlayerSignupModal';
 import { CreateMatchModal } from './components/CreateMatchModal';
 import { AuthLandingView } from './components/AuthLandingView';
 
+// Route sync helper to keep activeTab synchronized with URL
+const RouteSync: React.FC = () => {
+  const location = useLocation();
+  const { setActiveTab } = useApp();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/matches') || path === '/') {
+      setActiveTab('matches');
+    } else if (path.startsWith('/pitch') || path.startsWith('/tactics')) {
+      setActiveTab('pitch');
+    } else if (path.startsWith('/ratings') || path.startsWith('/rate')) {
+      setActiveTab('ratings');
+    } else if (path.startsWith('/roster') || path.startsWith('/players')) {
+      setActiveTab('players');
+    } else if (path.startsWith('/leaderboard') || path.startsWith('/stats') || path.startsWith('/rankings')) {
+      setActiveTab('stats');
+    } else if (path.startsWith('/logs') || path.startsWith('/audit')) {
+      setActiveTab('logs');
+    }
+  }, [location.pathname, setActiveTab]);
+
+  return null;
+};
+
 const MainLayout: React.FC = () => {
-  const { currentUser, activeTab, selectedPlayerId, setSelectedPlayerId, editPlayerId, setEditPlayerId } = useApp();
+  const { currentUser, selectedPlayerId, setSelectedPlayerId, editPlayerId, setEditPlayerId } = useApp();
 
   const [signupModalOpen, setSignupModalOpen] = useState(false);
   const [createMatchModalOpen, setCreateMatchModalOpen] = useState(false);
-  const [isPhoneFrame, setIsPhoneFrame] = useState(false);
+
   // Only valid authenticated accounts can access the app
   if (!currentUser) {
     return <AuthLandingView />;
@@ -27,28 +55,34 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+      <RouteSync />
       {/* Main App Container */}
-      <div
-        className={`w-full mx-auto transition-all duration-200 flex-1 flex flex-col ${
-          isPhoneFrame
-            ? 'max-w-md my-6 rounded-3xl border border-zinc-800 shadow-xl overflow-hidden min-h-[820px] bg-[#09090b] relative'
-            : 'max-w-md'
-        }`}
-      >
+      <div className="w-full mx-auto flex-1 flex flex-col max-w-md pb-16">
         {/* Header */}
         <Header
           onOpenNewPlayerModal={() => setSignupModalOpen(true)}
           onOpenNewMatchModal={() => setCreateMatchModalOpen(true)}
         />
 
-        {/* Active Tab View */}
+        {/* Dedicated Web Pages via React Router */}
         <main className="flex-1">
-          {activeTab === 'matches' && <MatchList />}
-          {activeTab === 'pitch' && <TacticalPitch />}
-          {activeTab === 'ratings' && <RatingWindow />}
-          {activeTab === 'stats' && <Leaderboard />}
-          {activeTab === 'logs' && <LogsAudit />}
-          {activeTab === 'players' && <RosterView />}
+          <Routes>
+            <Route path="/" element={<Navigate to="/matches" replace />} />
+            <Route path="/matches" element={<MatchesPage />} />
+            <Route path="/pitch" element={<TacticsPage />} />
+            <Route path="/tactics" element={<Navigate to="/pitch" replace />} />
+            <Route path="/ratings" element={<RatingsPage />} />
+            <Route path="/rate" element={<Navigate to="/ratings" replace />} />
+            <Route path="/roster" element={<RosterPage />} />
+            <Route path="/players" element={<Navigate to="/roster" replace />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/stats" element={<Navigate to="/leaderboard" replace />} />
+            <Route path="/rankings" element={<Navigate to="/leaderboard" replace />} />
+            <Route path="/logs" element={<LogsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:id" element={<ProfilePage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
         </main>
 
         {/* Bottom Mobile Navigation */}
@@ -69,6 +103,7 @@ const MainLayout: React.FC = () => {
           onClose={() => setEditPlayerId(null)}
         />
       )}
+
       {signupModalOpen && (
         <PlayerSignupModal onClose={() => setSignupModalOpen(false)} />
       )}
@@ -82,9 +117,10 @@ const MainLayout: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <BrowserRouter>
+      <AppProvider>
+        <MainLayout />
+      </AppProvider>
+    </BrowserRouter>
   );
 }
-

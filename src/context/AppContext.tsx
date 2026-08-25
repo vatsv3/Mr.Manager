@@ -128,7 +128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_LOGS);
       const parsed: RatingLog[] = saved ? JSON.parse(saved) : INITIAL_RATING_LOGS;
-      return parsed.filter(l => !l.id.startsWith('log'));
+      return parsed.filter(l => !/^log\d{1,2}$/.test(l.id));
     } catch {
       return INITIAL_RATING_LOGS;
     }

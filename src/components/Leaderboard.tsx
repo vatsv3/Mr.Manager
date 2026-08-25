@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TimeFilter } from '../types';
 import { POSITION_INFO } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 import {
   Trophy,
   Star,
@@ -155,7 +156,13 @@ export const Leaderboard: React.FC = () => {
                 className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2.5 text-center flex flex-col items-center cursor-pointer hover:border-zinc-700 transition"
               >
                 <span className="text-[10px] font-medium text-zinc-400 mb-1">#2</span>
-                <img src={p2.player.photo} alt={p2.player.name} className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-700" />
+                <PlayerAvatar
+                  player={p2.player}
+                  size="md"
+                  showBadge={true}
+                  badgePosition={p2.player.primaryPosition}
+                  className="rounded-full ring-1 ring-zinc-700"
+                />
                 <h4 className="text-xs font-medium text-zinc-200 mt-1 truncate max-w-[80px]">{p2.player.name.split(' ')[0]}</h4>
                 <span className="text-xs font-semibold text-zinc-300 mt-0.5">
                   {sortMetric === 'avgRating' && `${p2.avgRating}`}
@@ -178,7 +185,13 @@ export const Leaderboard: React.FC = () => {
                 className="bg-zinc-900/90 border border-zinc-700 rounded-xl p-3 text-center flex flex-col items-center cursor-pointer hover:border-zinc-600 transition"
               >
                 <span className="text-[10px] font-bold text-amber-400 mb-1">#1 Top</span>
-                <img src={p1.player.photo} alt={p1.player.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-zinc-600" />
+                <PlayerAvatar
+                  player={p1.player}
+                  size="lg"
+                  showBadge={true}
+                  badgePosition={p1.player.primaryPosition}
+                  className="rounded-full ring-2 ring-zinc-600"
+                />
                 <h4 className="text-xs font-semibold text-zinc-100 mt-1 truncate max-w-[90px]">{p1.player.name.split(' ')[0]}</h4>
                 <span className="text-xs font-bold text-emerald-400 mt-0.5">
                   {sortMetric === 'avgRating' && `${p1.avgRating}`}
@@ -201,7 +214,13 @@ export const Leaderboard: React.FC = () => {
                 className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2.5 text-center flex flex-col items-center cursor-pointer hover:border-zinc-700 transition"
               >
                 <span className="text-[10px] font-medium text-zinc-400 mb-1">#3</span>
-                <img src={p3.player.photo} alt={p3.player.name} className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-700" />
+                <PlayerAvatar
+                  player={p3.player}
+                  size="md"
+                  showBadge={true}
+                  badgePosition={p3.player.primaryPosition}
+                  className="rounded-full ring-1 ring-zinc-700"
+                />
                 <h4 className="text-xs font-medium text-zinc-200 mt-1 truncate max-w-[80px]">{p3.player.name.split(' ')[0]}</h4>
                 <span className="text-xs font-semibold text-zinc-300 mt-0.5">
                   {sortMetric === 'avgRating' && `${p3.avgRating}`}
@@ -220,7 +239,6 @@ export const Leaderboard: React.FC = () => {
       <div className="space-y-1.5">
         {sortedPlayers.map((stats, idx) => {
           const player = stats.player;
-          const posColor = POSITION_INFO[player.primaryPosition]?.color || '#10b981';
 
           return (
             <div
@@ -234,15 +252,13 @@ export const Leaderboard: React.FC = () => {
                   {idx + 1}
                 </span>
 
-                <div className="relative">
-                  <img src={player.photo} alt={player.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-800" />
-                  <span
-                    className="absolute -bottom-0.5 -right-0.5 text-[7px] font-semibold px-1 rounded-full text-white"
-                    style={{ backgroundColor: posColor }}
-                  >
-                    {player.primaryPosition}
-                  </span>
-                </div>
+                <PlayerAvatar
+                  player={player}
+                  size="sm"
+                  showBadge={true}
+                  badgePosition={player.primaryPosition}
+                  className="rounded-full ring-1 ring-zinc-800"
+                />
 
                 <div className="min-w-0">
                   <div className="flex items-center space-x-1.5">

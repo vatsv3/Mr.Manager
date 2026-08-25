@@ -170,12 +170,13 @@ export function subscribeToMatches(callback: (matches: Match[]) => void) {
 
 export function subscribeToRatingLogs(callback: (logs: RatingLog[]) => void) {
   try {
+    const mockLogPattern = /^log\d{1,2}$/;
     return onSnapshot(
       collection(db, RATING_LOGS_COL),
       snapshot => {
         const list: RatingLog[] = [];
         snapshot.forEach(docSnap => {
-          if (!docSnap.id.startsWith('log1') && !docSnap.id.startsWith('log2') && !docSnap.id.startsWith('log3')) {
+          if (!mockLogPattern.test(docSnap.id)) {
             list.push(docSnap.data() as RatingLog);
           }
         });

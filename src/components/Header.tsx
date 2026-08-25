@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Shield, User, ChevronDown, Check, Plus, Star, LogOut } from 'lucide-react';
 import { POSITION_INFO } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 
 interface HeaderProps {
   onOpenNewPlayerModal: () => void;
@@ -9,6 +11,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewMatchModal }) => {
+  const navigate = useNavigate();
   const {
     currentUser,
     setCurrentUser,
@@ -27,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
     <header className="sticky top-0 z-40 bg-[#09090b]/95 backdrop-blur-md border-b border-zinc-800/80 px-4 py-3">
       <div className="max-w-md mx-auto flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center space-x-2">
+        <Link to="/matches" className="flex items-center space-x-2">
           <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xs">
             ⚽
           </div>
@@ -44,14 +47,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
             </div>
             <p className="text-[10px] text-zinc-500 font-normal">Squad, ratings & MOTM</p>
           </div>
-        </div>
+        </Link>
 
         {/* Actions & User Switcher */}
         <div className="flex items-center space-x-2">
           {/* Active Rating Notification */}
           {activeRatingMatches.length > 0 && (
             <button
-              onClick={() => setActiveTab('ratings')}
+              onClick={() => {
+                setActiveTab('ratings');
+                navigate('/ratings');
+              }}
               className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition"
               title="Rating window is active"
             >
@@ -67,19 +73,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
               className="flex items-center space-x-2 bg-zinc-900/90 hover:bg-zinc-800/90 border border-zinc-800 rounded-full pl-1.5 pr-2.5 py-1 transition text-left"
             >
               {currentUser ? (
-                <div className="relative">
-                  <img
-                    src={currentUser.photo}
-                    alt={currentUser.name}
-                    className="w-6 h-6 rounded-full object-cover ring-1 ring-zinc-700"
-                  />
-                  <span
-                    className="absolute -bottom-0.5 -right-0.5 text-[7px] font-bold px-0.5 rounded text-white leading-none"
-                    style={{ backgroundColor: POSITION_INFO[currentUser.primaryPosition]?.color || '#10b981' }}
-                  >
-                    {currentUser.primaryPosition}
-                  </span>
-                </div>
+                <PlayerAvatar
+                  player={currentUser}
+                  size="xs"
+                  showBadge={true}
+                  className="rounded-full"
+                />
               ) : (
                 <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
                   <User className="w-3.5 h-3.5" />
@@ -124,11 +123,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                   {/* Account Information Card */}
                   <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-800/80 mb-2">
                     <div className="flex items-center space-x-2.5">
-                      {currentUser?.photo ? (
-                        <img
-                          src={currentUser.photo}
-                          alt={currentUser.name}
-                          className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-700"
+                      {currentUser ? (
+                        <PlayerAvatar
+                          player={currentUser}
+                          size="md"
+                          showBadge={false}
+                          className="rounded-xl ring-1 ring-zinc-700"
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
@@ -178,11 +178,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                         onClick={() => {
                           setSelectedPlayerId(currentUser.id);
                           setUserDropdownOpen(false);
-                          setActiveTab('stats');
+                          navigate('/profile');
                         }}
                         className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700/80 text-zinc-200 transition"
                       >
-                        <User className="w-3.5 h-3.5" /> View My Stats & Ratings
+                        <User className="w-3.5 h-3.5" /> View My Profile & Stats
                       </button>
                     )}
 

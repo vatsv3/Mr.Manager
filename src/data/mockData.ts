@@ -7,7 +7,7 @@ export const INITIAL_PLAYERS: Player[] = [
     isAdmin: true,
     role: 'admin',
     name: 'Vatsal',
-    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    photo: '',
     primaryPosition: 'GK',
     secondaryPosition: 'CB',
     secondaryPositions: ['CB', 'LB', 'RB', 'CDM'],

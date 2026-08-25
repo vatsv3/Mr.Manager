@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Player, FootballPosition } from '../types';
-import { ALL_POSITIONS, AVAILABLE_TRAITS, DEFAULT_AVATAR } from '../data/constants';
-import { Upload, X, Shield, Star, Trash2 } from 'lucide-react';
+import { ALL_POSITIONS, AVAILABLE_TRAITS } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
+import { Upload, X, Shield, Star, Trash2, Shirt, Image } from 'lucide-react';
 
 interface EditPlayerModalProps {
   player: Player;
@@ -17,7 +18,16 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
   const [jerseyNumber, setJerseyNumber] = useState<number | string>(player.jerseyNumber || '');
   const [nickname, setNickname] = useState(player.nickname || '');
   const [preferredFoot, setPreferredFoot] = useState<'Left' | 'Right' | 'Both'>(player.preferredFoot || 'Right');
-  const [photo, setPhoto] = useState(player.photo || DEFAULT_AVATAR);
+  const [photo, setPhoto] = useState(
+    player.photo && !player.photo.includes('images.unsplash.com/photo-1535713875002-d1d0cf377fde')
+      ? player.photo
+      : ''
+  );
+  const [photoMode, setPhotoMode] = useState<'jersey' | 'custom'>(
+    player.photo && player.photo.trim().length > 0 && !player.photo.includes('images.unsplash.com/photo-1535713875002-d1d0cf377fde')
+      ? 'custom'
+      : 'jersey'
+  );
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>(player.primaryPosition || 'CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(
     player.secondaryPositions && player.secondaryPositions.length > 0
@@ -28,6 +38,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
   );
   const [baseRating, setBaseRating] = useState<number | string>(player.baseRating !== undefined ? player.baseRating : '');
   const [selectedTraits, setSelectedTraits] = useState<string[]>(player.traits || []);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const toggleTrait = (traitId: string) => {
     setSelectedTraits(prev =>
@@ -54,6 +65,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
       reader.onload = () => {
         if (typeof reader.result === 'string') {
           setPhoto(reader.result);
+          setPhotoMode('custom');
         }
       };
       reader.readAsDataURL(file);
@@ -66,13 +78,14 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
 
     const parsedRating = baseRating === '' ? undefined : Number(baseRating);
     const parsedJersey = jerseyNumber === '' ? undefined : Number(jerseyNumber);
+    const finalPhoto = photoMode === 'custom' && photo.trim().length > 0 ? photo.trim() : '';
 
     updatePlayer(player.id, {
       name: name.trim(),
       jerseyNumber: parsedJersey,
       nickname: nickname.trim() || undefined,
       preferredFoot,
-      photo: photo.trim() || DEFAULT_AVATAR,
+      photo: finalPhoto,
       primaryPosition,
       secondaryPosition: secondaryPositions[0] || undefined,
       secondaryPositions,
@@ -93,6 +106,8 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
   if (!isAdmin) {
     return null;
   }
+
+  const effectiveJerseyNumber = jerseyNumber === '' ? undefined : Number(jerseyNumber);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -115,37 +130,79 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
         </div>
 
         <form onSubmit={handleSave} className="space-y-3.5 text-xs">
-          {/* Avatar & Photo Upload */}
-          <div className="flex items-center gap-3 bg-zinc-950/60 p-3 rounded-xl border border-zinc-800">
-            <img
-              src={photo}
-              alt={name}
-              className="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-500/50"
-            />
-            <div className="flex-1 space-y-1.5">
-              <label className="text-[11px] font-medium text-zinc-400 block">Player Photo URL / Upload</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={photo}
-                  onChange={e => setPhoto(e.target.value)}
-                  placeholder="https://..."
-                  className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-zinc-100 text-xs focus:outline-none focus:border-emerald-500"
-                />
+          {/* Avatar & Photo Options */}
+          <div className="bg-zinc-950/60 p-3 rounded-xl border border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-medium text-zinc-300">Profile Appearance</label>
+              <div className="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px]">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs flex items-center gap-1 transition"
+                  onClick={() => {
+                    setPhotoMode('jersey');
+                    setPhoto('');
+                  }}
+                  className={`px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1 ${
+                    photoMode === 'jersey'
+                      ? 'bg-emerald-500 text-zinc-950 font-bold shadow'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
                 >
-                  <Upload className="w-3.5 h-3.5" /> Upload
+                  <Shirt className="w-3 h-3" /> Team Jersey
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                <button
+                  type="button"
+                  onClick={() => setPhotoMode('custom')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1 ${
+                    photoMode === 'custom'
+                      ? 'bg-emerald-500 text-zinc-950 font-bold shadow'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  <Image className="w-3 h-3" /> Custom Photo
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <PlayerAvatar
+                name={name || 'Player'}
+                photo={photoMode === 'custom' ? photo : ''}
+                primaryPosition={primaryPosition}
+                jerseyNumber={effectiveJerseyNumber}
+                size="lg"
+                className="w-14 h-14 ring-2 ring-emerald-500/50 rounded-xl"
+              />
+
+              <div className="flex-1 space-y-1.5 min-w-0">
+                {photoMode === 'jersey' ? (
+                  <p className="text-[11px] text-zinc-400">
+                    Displaying solid position jersey (#{effectiveJerseyNumber || '—'} • {primaryPosition})
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={photo}
+                      onChange={e => setPhoto(e.target.value)}
+                      placeholder="Paste image URL..."
+                      className="flex-1 min-w-0 bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-zinc-100 text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs flex items-center gap-1 shrink-0 transition"
+                    >
+                      <Upload className="w-3.5 h-3.5" /> Upload
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -326,13 +383,35 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
 
           {/* Footer Save & Delete */}
           <div className="pt-2 flex items-center gap-2 border-t border-zinc-800">
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="py-2 px-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Delete Player
-            </button>
+            {confirmDelete ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    deletePlayer(player.id);
+                    onClose();
+                  }}
+                  className="py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Confirm Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="py-2 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="py-2 px-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            )}
             <button
               type="submit"
               className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg text-xs transition"

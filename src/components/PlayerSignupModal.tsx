@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { FootballPosition } from '../types';
-import { ALL_POSITIONS, AVAILABLE_TRAITS, DEFAULT_AVATAR } from '../data/constants';
-import { Upload, X } from 'lucide-react';
+import { ALL_POSITIONS, AVAILABLE_TRAITS } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
+import { Upload, X, Check, Shirt, Image } from 'lucide-react';
 
 interface PlayerSignupModalProps {
   onClose: () => void;
@@ -14,13 +15,13 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
 
   const [name, setName] = useState('');
   const [jerseyNumber, setJerseyNumber] = useState<number>(10);
-  const [photoType, setPhotoType] = useState<'default' | 'upload'>('default');
+  const [photoType, setPhotoType] = useState<'jersey' | 'upload'>('jersey');
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>('');
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>('CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(['CM', 'LW']);
 
   const toggleSecondaryPosition = (pos: FootballPosition) => {
-    if (pos === primaryPosition) return; // Cannot be primary and secondary at same time
+    if (pos === primaryPosition) return;
     setSecondaryPositions(prev =>
       prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos]
     );
@@ -28,7 +29,6 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
 
   const handlePrimaryPositionChange = (pos: FootballPosition) => {
     setPrimaryPosition(pos);
-    // Remove from secondary positions if it was selected
     setSecondaryPositions(prev => prev.filter(p => p !== pos));
   };
 
@@ -53,7 +53,7 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
     const finalPhoto =
       photoType === 'upload' && uploadedPhotoUrl.trim()
         ? uploadedPhotoUrl.trim()
-        : DEFAULT_AVATAR;
+        : '';
 
     const created = addPlayer({
       name: name.trim(),
@@ -114,29 +114,32 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
             </div>
           </div>
 
-          {/* Profile Photo Options */}
+          {/* Profile Appearance Options */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-medium text-zinc-400 block">Profile Photo</label>
+            <label className="text-[11px] font-medium text-zinc-400 block">Profile Appearance</label>
 
             <div className="grid grid-cols-2 gap-2">
-              {/* Default Avatar */}
+              {/* Team Jersey Avatar */}
               <button
                 type="button"
-                onClick={() => setPhotoType('default')}
+                onClick={() => setPhotoType('jersey')}
                 className={`p-2.5 rounded-lg border flex items-center space-x-2.5 transition text-left ${
-                  photoType === 'default'
-                    ? 'bg-zinc-800 border-zinc-500 text-zinc-100'
+                  photoType === 'jersey'
+                    ? 'bg-zinc-800 border-emerald-500 text-zinc-100'
                     : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/40'
                 }`}
               >
-                <img
-                  src={DEFAULT_AVATAR}
-                  alt="Default"
-                  className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-700"
+                <PlayerAvatar
+                  name={name || 'Player'}
+                  photo=""
+                  primaryPosition={primaryPosition}
+                  jerseyNumber={jerseyNumber}
+                  size="sm"
+                  className="rounded-lg"
                 />
                 <div className="min-w-0">
-                  <span className="text-xs font-medium block text-zinc-200">Default Avatar</span>
-                  <span className="text-[10px] text-zinc-500">Standard icon</span>
+                  <span className="text-xs font-semibold block text-zinc-200">Team Jersey</span>
+                  <span className="text-[10px] text-zinc-500">Solid color kit</span>
                 </div>
               </button>
 
@@ -148,7 +151,7 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
                 }}
                 className={`p-2.5 rounded-lg border flex items-center space-x-2.5 transition cursor-pointer ${
                   photoType === 'upload'
-                    ? 'bg-zinc-800 border-zinc-500 text-zinc-100'
+                    ? 'bg-zinc-800 border-emerald-500 text-zinc-100'
                     : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/40'
                 }`}
               >
@@ -156,19 +159,19 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
                   <img
                     src={uploadedPhotoUrl}
                     alt="Uploaded"
-                    className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-500"
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-emerald-500"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400">
                     <Upload className="w-4 h-4" />
                   </div>
                 )}
                 <div className="min-w-0">
                   <span className="text-xs font-medium block text-zinc-200">
-                    {uploadedPhotoUrl ? 'Photo Selected' : 'Upload Photo'}
+                    {uploadedPhotoUrl ? 'Photo Added' : 'Custom Photo'}
                   </span>
                   <span className="text-[10px] text-zinc-500">
-                    {uploadedPhotoUrl ? 'Click to change' : 'From device'}
+                    {uploadedPhotoUrl ? 'Click to change' : 'Upload photo'}
                   </span>
                 </div>
 

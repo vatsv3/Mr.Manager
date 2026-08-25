@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { FootballPosition, MatchFormat } from '../types';
 import { POSITION_INFO, ALL_POSITIONS, FORMATION_PRESETS } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 import { Move, Plus, UserPlus, Star, X, Award } from 'lucide-react';
 
 export const TacticalPitch: React.FC = () => {
@@ -203,10 +204,11 @@ export const TacticalPitch: React.FC = () => {
               boxShadow: `0 0 8px ${kitColor}60`,
             }}
           >
-            <img
-              src={player.photo}
-              alt={player.name}
-              className="w-full h-full object-cover"
+            <PlayerAvatar
+              player={player}
+              size="sm"
+              showBadge={false}
+              className="w-full h-full rounded-full"
             />
           </div>
 
@@ -457,10 +459,11 @@ export const TacticalPitch: React.FC = () => {
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
-                    <img
-                      src={player.photo}
-                      alt={player.name}
-                      className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-700"
+                    <PlayerAvatar
+                      player={player}
+                      size="sm"
+                      showBadge={false}
+                      className="rounded-full ring-1 ring-zinc-700"
                     />
                     <div>
                       <div className="flex items-center space-x-1.5">
@@ -605,7 +608,12 @@ export const TacticalPitch: React.FC = () => {
                     className="flex items-center justify-between p-2 bg-zinc-950/70 rounded-lg border border-zinc-800/80"
                   >
                     <div className="flex items-center space-x-2">
-                      <img src={p.photo} alt={p.name} className="w-7 h-7 rounded-full object-cover" />
+                      <PlayerAvatar
+                        player={p}
+                        size="xs"
+                        showBadge={false}
+                        className="rounded-full"
+                      />
                       <div>
                         <p className="text-xs font-medium text-zinc-200">{p.name}</p>
                         <div className="flex items-center space-x-1.5 text-[10px] text-zinc-400">

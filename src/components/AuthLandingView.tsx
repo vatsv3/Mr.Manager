@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { FootballPosition, Player } from '../types';
-import { ALL_POSITIONS, AVAILABLE_TRAITS, DEFAULT_AVATAR, POSITION_INFO } from '../data/constants';
+import { ALL_POSITIONS, AVAILABLE_TRAITS, POSITION_INFO } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 import {
   Shield,
   User,
@@ -15,6 +16,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   Upload,
+  Shirt,
+  Image,
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import {
@@ -46,7 +49,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [jerseyNumber, setJerseyNumber] = useState<number>(10);
-  const [photoType, setPhotoType] = useState<'default' | 'upload'>('default');
+  const [photoType, setPhotoType] = useState<'jersey' | 'upload'>('jersey');
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>('');
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>('CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(['CM', 'LW']);
@@ -185,7 +188,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
     const finalPhoto =
       photoType === 'upload' && uploadedPhotoUrl.trim()
         ? uploadedPhotoUrl.trim()
-        : DEFAULT_AVATAR;
+        : '';
 
     try {
       const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
@@ -499,27 +502,31 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
                 </div>
               </div>
 
-              {/* Profile Photo Options */}
+              {/* Profile Appearance Options */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-zinc-400 block">Profile Photo</label>
+                <label className="text-[11px] font-medium text-zinc-400 block">Profile Appearance</label>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setPhotoType('default')}
+                    onClick={() => setPhotoType('jersey')}
                     className={`p-2 rounded-lg border flex items-center space-x-2 transition text-left ${
-                      photoType === 'default'
-                        ? 'bg-zinc-800 border-zinc-500 text-zinc-100'
+                      photoType === 'jersey'
+                        ? 'bg-zinc-800 border-emerald-500 text-zinc-100'
                         : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/40'
                     }`}
                   >
-                    <img
-                      src={DEFAULT_AVATAR}
-                      alt="Default"
-                      className="w-7 h-7 rounded-full object-cover ring-1 ring-zinc-700"
+                    <PlayerAvatar
+                      name={name || 'Player'}
+                      photo=""
+                      primaryPosition={primaryPosition}
+                      jerseyNumber={jerseyNumber}
+                      size="sm"
+                      className="rounded-lg"
                     />
                     <div className="min-w-0">
-                      <span className="text-[11px] font-medium block text-zinc-200">Default Icon</span>
+                      <span className="text-[11px] font-semibold block text-zinc-200">Team Jersey</span>
+                      <span className="text-[9px] text-zinc-500">Solid color kit</span>
                     </div>
                   </button>
 
@@ -530,7 +537,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
                     }}
                     className={`p-2 rounded-lg border flex items-center space-x-2 transition cursor-pointer ${
                       photoType === 'upload'
-                        ? 'bg-zinc-800 border-zinc-500 text-zinc-100'
+                        ? 'bg-zinc-800 border-emerald-500 text-zinc-100'
                         : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/40'
                     }`}
                   >
@@ -538,17 +545,18 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
                       <img
                         src={uploadedPhotoUrl}
                         alt="Uploaded"
-                        className="w-7 h-7 rounded-full object-cover ring-1 ring-zinc-500"
+                        className="w-8 h-8 rounded-lg object-cover ring-1 ring-emerald-500"
                       />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400">
                         <Upload className="w-3.5 h-3.5" />
                       </div>
                     )}
                     <div className="min-w-0">
                       <span className="text-[11px] font-medium block text-zinc-200">
-                        {uploadedPhotoUrl ? 'Selected' : 'Upload File'}
+                        {uploadedPhotoUrl ? 'Photo Added' : 'Custom Photo'}
                       </span>
+                      <span className="text-[9px] text-zinc-500">Upload file</span>
                     </div>
 
                     <input

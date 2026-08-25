@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TimeFilter } from '../types';
 import { POSITION_INFO, AVAILABLE_TRAITS } from '../data/constants';
+import { PlayerAvatar } from './PlayerAvatar';
 import { EditPlayerModal } from './EditPlayerModal';
 import {
   Star,
@@ -69,18 +70,13 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ playerId
           <div className="rounded-xl p-3.5 bg-zinc-950/60 border border-zinc-800/80 space-y-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <img
-                    src={player.photo}
-                    alt={player.name}
-                    className="w-12 h-12 rounded-xl object-cover ring-1 ring-zinc-700"
-                  />
-                  {player.jerseyNumber && (
-                    <span className="absolute -bottom-1 -right-1 bg-zinc-900 text-zinc-200 text-[9px] font-mono font-medium px-1 rounded border border-zinc-700">
-                      #{player.jerseyNumber}
-                    </span>
-                  )}
-                </div>
+                <PlayerAvatar
+                  player={player}
+                  size="lg"
+                  showBadge={true}
+                  badgePosition={player.primaryPosition}
+                  className="rounded-xl ring-1 ring-zinc-700"
+                />
 
                 <div>
                   <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-1.5">

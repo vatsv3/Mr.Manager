@@ -43,10 +43,9 @@ export const AVAILABLE_TRAITS: PlayerTrait[] = [
   { id: 'rush_out', name: 'Rush Out', icon: 'https://img.fifamobileguide.com/fcmobile/26/playstyles/playstyle_256_PLAYSTYLE_SUPER_RUSH_2.png', description: 'Rush Out Playstyle', category: 'goalkeeping' },
 ];
 
-export const DEFAULT_AVATAR =
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80';
+export const DEFAULT_AVATAR = '';
 
-export const AVATAR_PRESETS = [DEFAULT_AVATAR];
+export const AVATAR_PRESETS = [''];
 
 export interface FormationPreset {
   name: string;

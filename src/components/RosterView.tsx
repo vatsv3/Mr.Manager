@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { POSITION_INFO, AVAILABLE_TRAITS } from '../data/constants';
 import { Player } from '../types';
+import { PlayerAvatar } from './PlayerAvatar';
 import { EditPlayerModal } from './EditPlayerModal';
 import { Search, Shield, Star, Trash2, Edit3, UserPlus, Trophy } from 'lucide-react';
 
@@ -10,6 +11,7 @@ export const RosterView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState<string>('ALL');
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
 
   const filteredPlayers = useMemo(() => {
     return players
@@ -24,11 +26,10 @@ export const RosterView: React.FC = () => {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [players, searchQuery, positionFilter]);
 
-  const handleDelete = (e: React.MouseEvent, id: string, name: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm(`Are you sure you want to delete ${name}'s profile?`)) {
-      deletePlayer(id);
-    }
+    deletePlayer(id);
+    setDeletingPlayerId(null);
   };
 
   const handleEdit = (e: React.MouseEvent, player: Player) => {
@@ -102,20 +103,15 @@ export const RosterView: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative shrink-0">
-                      <img
-                        src={player.photo}
-                        alt={player.name}
-                        className={`w-12 h-12 rounded-xl object-cover ring-2 ${
-                          isCurrentUser ? 'ring-emerald-500' : 'ring-zinc-700/80'
-                        }`}
-                      />
-                      {player.jerseyNumber && (
-                        <span className="absolute -bottom-1 -right-1 bg-zinc-900 text-zinc-200 text-[9px] font-mono font-bold px-1 rounded border border-zinc-700">
-                          #{player.jerseyNumber}
-                        </span>
-                      )}
-                    </div>
+                    <PlayerAvatar
+                      player={player}
+                      size="lg"
+                      showBadge={true}
+                      badgePosition={player.primaryPosition}
+                      className={`rounded-xl shrink-0 ring-2 ${
+                        isCurrentUser ? 'ring-emerald-500' : 'ring-zinc-700/80'
+                      }`}
+                    />
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -186,12 +182,35 @@ export const RosterView: React.FC = () => {
                     >
                       <Edit3 className="w-3 h-3 text-emerald-400" /> Edit Profile
                     </button>
-                    <button
-                      onClick={e => handleDelete(e, player.id, player.name)}
-                      className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 transition flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" /> Delete
-                    </button>
+                    {deletingPlayerId === player.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={e => handleDelete(e, player.id)}
+                          className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Confirm
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setDeletingPlayerId(null);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-400 hover:text-zinc-200 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDeletingPlayerId(player.id);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 transition flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
