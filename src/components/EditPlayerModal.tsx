@@ -45,6 +45,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
   const [baseRating, setBaseRating] = useState<number | string>(player.baseRating !== undefined ? player.baseRating : '');
   const [selectedTraits, setSelectedTraits] = useState<string[]>(player.traits || []);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isPlayerAdmin, setIsPlayerAdmin] = useState(player.isAdmin || false);
 
   const toggleTrait = (traitId: string) => {
     setSelectedTraits(prev =>
@@ -109,6 +110,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
       secondaryPositions,
       baseRating: parsedRating,
       traits: selectedTraits,
+      isAdmin: isPlayerAdmin,
     });
 
     onClose();
@@ -422,6 +424,34 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
               })}
             </div>
           </div>
+
+          {/* Admin Role Grant */}
+          {isAdmin && (
+            <div className="space-y-1.5 pt-2 border-t border-zinc-800/50">
+              <label className="text-[11px] font-semibold text-amber-400 block">
+                System Access
+              </label>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-950/50 border border-zinc-800/50">
+                <div>
+                  <p className="text-[11px] text-zinc-300 font-medium">Administrator Privileges</p>
+                  <p className="text-[9px] text-zinc-500">Allow this user to edit matches, ratings, and players.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPlayerAdmin(!isPlayerAdmin)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isPlayerAdmin ? 'bg-amber-500' : 'bg-zinc-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      isPlayerAdmin ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Footer Save & Delete */}
           <div className="pt-2 flex items-center gap-2 border-t border-zinc-800">

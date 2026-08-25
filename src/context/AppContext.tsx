@@ -151,7 +151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(LOCAL_STORAGE_USER);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed?.email?.toLowerCase() === 'vatsv3temp@gmail.com';
+        return parsed?.email?.toLowerCase() === 'vatsv3temp@gmail.com' || parsed?.isAdmin === true;
       }
       return false;
     } catch {
@@ -750,7 +750,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setCurrentUserHandler = (user: Player | null) => {
     setCurrentUser(user);
     if (user) {
-      if (user.email?.toLowerCase() === 'vatsv3temp@gmail.com') {
+      if (user.email?.toLowerCase() === 'vatsv3temp@gmail.com' || user.isAdmin === true) {
         setIsAdmin(true);
       } else {
         setIsAdmin(false);

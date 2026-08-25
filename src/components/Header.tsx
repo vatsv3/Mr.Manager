@@ -102,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                   <div className="px-3 py-2 border-b border-zinc-800">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[11px] font-medium text-zinc-400">Current User</span>
-                      {currentUser?.email?.toLowerCase() === 'vatsv3temp@gmail.com' && (
+                      {(currentUser?.email?.toLowerCase() === 'vatsv3temp@gmail.com' || currentUser?.isAdmin) && (
                         <button
                           onClick={() => setIsAdmin(!isAdmin)}
                           className={`text-[11px] px-2 py-0.5 rounded font-medium transition ${
