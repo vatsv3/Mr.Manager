@@ -87,7 +87,6 @@ const LOCAL_STORAGE_PLAYERS = 'mrmanager_players_v2';
 const LOCAL_STORAGE_MATCHES = 'mrmanager_matches_v2';
 const LOCAL_STORAGE_LOGS = 'mrmanager_logs_v2';
 const LOCAL_STORAGE_USER = 'mrmanager_current_user_v2';
-const LOCAL_STORAGE_ADMIN = 'mrmanager_is_admin_v2';
 
 // Clear legacy mock storage keys if present
 try {
@@ -149,10 +148,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_ADMIN);
-      return saved ? JSON.parse(saved) : true;
+      const saved = localStorage.getItem(LOCAL_STORAGE_USER);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed?.email?.toLowerCase() === 'vatsv3temp@gmail.com';
+      }
+      return false;
     } catch {
-      return true;
+      return false;
     }
   });
 
@@ -226,14 +229,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Failed saving current user to localStorage', e);
     }
   }, [currentUser]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_ADMIN, JSON.stringify(isAdmin));
-    } catch (e) {
-      console.error('Failed saving admin status to localStorage', e);
-    }
-  }, [isAdmin]);
 
   // Recalculate match statistics dynamically based on ratingLogs and goal events
   const computeMatchStats = (match: Match, logs: RatingLog[]): { calculatedStats: Record<string, PlayerMatchComputedStats>; computedMvpId?: string; computedMvpScore?: number } => {
@@ -755,9 +750,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setCurrentUserHandler = (user: Player | null) => {
     setCurrentUser(user);
     if (user) {
-      if (user.email?.toLowerCase() === 'vatsv3temp@gmail.com' || user.id === 'p_vatsal' || user.isAdmin || user.role === 'admin') {
+      if (user.email?.toLowerCase() === 'vatsv3temp@gmail.com') {
         setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
       }
+    } else {
+      setIsAdmin(false);
     }
   };
 

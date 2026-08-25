@@ -102,16 +102,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                   <div className="px-3 py-2 border-b border-zinc-800">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[11px] font-medium text-zinc-400">Current User</span>
-                      <button
-                        onClick={() => setIsAdmin(!isAdmin)}
-                        className={`text-[11px] px-2 py-0.5 rounded font-medium transition ${
-                          isAdmin
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
-                        }`}
-                      >
-                        {isAdmin ? 'Admin Mode On' : 'Enable Admin'}
-                      </button>
+                      {currentUser?.email?.toLowerCase() === 'vatsv3temp@gmail.com' && (
+                        <button
+                          onClick={() => setIsAdmin(!isAdmin)}
+                          className={`text-[11px] px-2 py-0.5 rounded font-medium transition ${
+                            isAdmin
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+                          }`}
+                        >
+                          {isAdmin ? 'Admin Mode On' : 'Enable Admin'}
+                        </button>
+                      )}
                     </div>
                     {currentUser && (
                       <p className="text-xs text-zinc-300">
