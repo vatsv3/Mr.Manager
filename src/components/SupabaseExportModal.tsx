@@ -12,7 +12,7 @@ export const SupabaseExportModal: React.FC<SupabaseExportModalProps> = ({ onClos
   const [activeView, setActiveView] = useState<'sql' | 'json' | 'instructions'>('sql');
 
   const supabaseSql = `-- ==========================================
--- PITCHSQUAD SUPABASE DATABASE SCHEMA
+-- MR.MANAGER SUPABASE DATABASE SCHEMA
 -- Execute in Supabase SQL Editor
 -- ==========================================
 
@@ -90,7 +90,7 @@ CREATE POLICY "Users can insert ratings" ON public.rating_logs FOR INSERT WITH C
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pitchsquad_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `mr_manager_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

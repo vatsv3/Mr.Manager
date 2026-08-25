@@ -120,7 +120,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = ({ onGuestContinu
             ⚽
           </div>
           <h1 className="text-xl font-bold tracking-tight text-zinc-100">
-            PitchSquad
+            Mr.Manager
           </h1>
           <p className="text-xs text-zinc-400">
             Turf Squad Tactics, Balanced Teams & Peer Ratings
@@ -265,7 +265,7 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = ({ onGuestContinu
                 disabled={!selectedPlayerId}
                 className="w-full py-2.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-xl text-xs transition shadow flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                <span>Continue into PitchSquad</span>
+                <span>Continue into Mr.Manager</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 

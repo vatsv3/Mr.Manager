@@ -1,5 +1,5 @@
 {
-  "name": "PitchSquad - Mobile Football Manager & Player Ratings",
+  "name": "Mr.Manager - Mobile Football Manager & Player Ratings",
   "description": "Mobile-first football squad management, interactive tactical pitch board (5v5 to 11v11), peer match rating window, live goal & assist tracking, MVP voting, and comprehensive player statistics.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

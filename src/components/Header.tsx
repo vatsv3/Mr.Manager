@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
           <div>
             <div className="flex items-center space-x-1.5">
               <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
-                PitchSquad
+                Mr.Manager
               </h1>
               {isAdmin && (
                 <span className="text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-emerald-400 border border-zinc-700/60">

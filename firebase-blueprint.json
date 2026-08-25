@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "PitchSquad Cloud Firestore Schema",
+  "title": "Mr.Manager Cloud Firestore Schema",
   "entities": {
     "players": {
       "description": "Registered squad football players",
