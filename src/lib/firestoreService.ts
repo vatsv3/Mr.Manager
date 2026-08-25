@@ -16,33 +16,64 @@ const MATCHES_COL = 'matches';
 const RATING_LOGS_COL = 'ratingLogs';
 
 /**
- * Seed initial mock data into Firestore if collections are empty.
+ * Seed & clean Firestore collections so only real accounts exist.
  */
 export async function seedFirestoreIfEmpty() {
   try {
     const playersSnap = await getDocs(collection(db, PLAYERS_COL));
-    if (playersSnap.empty) {
-      const batch = writeBatch(db);
-      INITIAL_PLAYERS.forEach(p => {
-        const ref = doc(db, PLAYERS_COL, p.id);
-        batch.set(ref, p);
-      });
-      INITIAL_MATCHES.forEach(m => {
-        const ref = doc(db, MATCHES_COL, m.id);
-        batch.set(ref, m);
-      });
-      INITIAL_RATING_LOGS.forEach(l => {
-        const ref = doc(db, RATING_LOGS_COL, l.id);
-        batch.set(ref, l);
-      });
-      await batch.commit();
-    }
+    
+    // Purge old mock player IDs (p1 through p12) and sample matches/logs if present
+    const mockPlayerIds = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11', 'p12'];
+    const mockMatchIds = ['m1', 'm2', 'm3'];
+    const mockLogIds = ['log1', 'log2', 'log3', 'log4', 'log5', 'log6', 'log7', 'log8', 'log9', 'log10', 'log11', 'log12', 'log13'];
+    
+    const purgeBatch = writeBatch(db);
+    mockPlayerIds.forEach(id => {
+      purgeBatch.delete(doc(db, PLAYERS_COL, id));
+    });
+    mockMatchIds.forEach(id => {
+      purgeBatch.delete(doc(db, MATCHES_COL, id));
+    });
+    mockLogIds.forEach(id => {
+      purgeBatch.delete(doc(db, RATING_LOGS_COL, id));
+    });
+    
+    // Always persist Admin Vatsal (vatsv3temp@gmail.com)
+    const vatsalDocRef = doc(db, PLAYERS_COL, 'p_vatsal');
+    purgeBatch.set(vatsalDocRef, INITIAL_PLAYERS[0], { merge: true });
+    
+    await purgeBatch.commit();
   } catch (err: unknown) {
-    // Gracefully ignore offline warnings as Firestore will operate in local persistence mode
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes('unavailable') && !msg.includes('offline')) {
-      console.warn('Firestore initial seeding notification:', msg);
+      console.warn('Firestore initialization notice:', msg);
     }
+  }
+}
+
+/**
+ * Hard reset database to clean state with Admin
+ */
+export async function resetDatabaseToCleanState() {
+  try {
+    const batch = writeBatch(db);
+    const playersSnap = await getDocs(collection(db, PLAYERS_COL));
+    playersSnap.forEach(d => {
+      if (d.id !== 'p_vatsal') {
+        batch.delete(d.ref);
+      }
+    });
+    const matchesSnap = await getDocs(collection(db, MATCHES_COL));
+    matchesSnap.forEach(d => batch.delete(d.ref));
+    
+    const logsSnap = await getDocs(collection(db, RATING_LOGS_COL));
+    logsSnap.forEach(d => batch.delete(d.ref));
+
+    // Ensure Vatsal admin doc
+    batch.set(doc(db, PLAYERS_COL, 'p_vatsal'), INITIAL_PLAYERS[0], { merge: true });
+    await batch.commit();
+  } catch (e) {
+    console.warn('Reset database notice:', e);
   }
 }
 

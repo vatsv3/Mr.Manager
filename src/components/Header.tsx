@@ -121,72 +121,82 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                     )}
                   </div>
 
-                  {/* Player List */}
-                  <div className="max-h-56 overflow-y-auto py-1 space-y-0.5">
-                    {players.map(player => {
-                      const isSelected = currentUser?.id === player.id;
-                      const posColor = POSITION_INFO[player.primaryPosition]?.color || '#10b981';
-                      return (
-                        <button
-                          key={player.id}
-                          onClick={() => {
-                            setCurrentUser(player);
-                            setUserDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition ${
-                            isSelected ? 'bg-zinc-800 text-zinc-100' : 'hover:bg-zinc-800/60 text-zinc-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-2 truncate">
-                            <img
-                              src={player.photo}
-                              alt={player.name}
-                              className="w-6 h-6 rounded-full object-cover"
-                            />
-                            <div className="truncate">
-                              <p className="font-medium text-zinc-100 truncate">{player.name}</p>
-                              <div className="flex items-center space-x-1">
-                                <span
-                                  className="text-[8px] font-semibold px-1 rounded text-white"
-                                  style={{ backgroundColor: posColor }}
-                                >
-                                  {player.primaryPosition}
-                                </span>
-                                {player.jerseyNumber && (
-                                  <span className="text-[9px] text-zinc-500 font-mono">#{player.jerseyNumber}</span>
-                                )}
-                              </div>
-                            </div>
+                  {/* Account Information Card */}
+                  <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-800/80 mb-2">
+                    <div className="flex items-center space-x-2.5">
+                      {currentUser?.photo ? (
+                        <img
+                          src={currentUser.photo}
+                          alt={currentUser.name}
+                          className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-700"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+                          <User className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="font-semibold text-xs text-zinc-100 truncate">
+                            {currentUser?.name || 'Account'}
+                          </span>
+                          {currentUser?.jerseyNumber && (
+                            <span className="text-[10px] text-zinc-500 font-mono">
+                              #{currentUser.jerseyNumber}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-zinc-400 truncate">
+                          {currentUser?.email || (currentUser?.isAdmin ? 'Admin' : 'Player')}
+                        </p>
+                        {currentUser?.primaryPosition && (
+                          <div className="flex items-center space-x-1 mt-1">
+                            <span
+                              className="text-[9px] font-semibold px-1 rounded text-white"
+                              style={{
+                                backgroundColor:
+                                  POSITION_INFO[currentUser.primaryPosition]?.color || '#10b981',
+                              }}
+                            >
+                              {currentUser.primaryPosition}
+                            </span>
+                            {currentUser.secondaryPositions && currentUser.secondaryPositions.length > 0 && (
+                              <span className="text-[9px] text-zinc-500 truncate">
+                                +{currentUser.secondaryPositions.join(', ')}
+                              </span>
+                            )}
                           </div>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
-                        </button>
-                      );
-                    })}
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-1.5 mt-1 border-t border-zinc-800 space-y-1">
+                  <div className="space-y-1">
                     {currentUser && (
                       <button
                         onClick={() => {
                           setSelectedPlayerId(currentUser.id);
                           setUserDropdownOpen(false);
+                          setActiveTab('stats');
                         }}
                         className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700/80 text-zinc-200 transition"
                       >
-                        <User className="w-3 h-3" /> View Profile & Stats
+                        <User className="w-3.5 h-3.5" /> View My Stats & Ratings
                       </button>
                     )}
 
-                    <button
-                      onClick={() => {
-                        setUserDropdownOpen(false);
-                        onOpenNewPlayerModal();
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition"
-                    >
-                      <Plus className="w-3 h-3" /> Register Player
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onOpenNewMatchModal();
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Create Match & Lineups
+                      </button>
+                    )}
 
                     <button
                       onClick={async () => {
@@ -195,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                       }}
                       className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition"
                     >
-                      <LogOut className="w-3 h-3" /> Log Out Account
+                      <LogOut className="w-3.5 h-3.5" /> Sign Out Account
                     </button>
                   </div>
                 </div>

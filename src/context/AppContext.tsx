@@ -81,17 +81,32 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_PLAYERS = 'pitchsquad_players_v1';
-const LOCAL_STORAGE_MATCHES = 'pitchsquad_matches_v1';
-const LOCAL_STORAGE_LOGS = 'pitchsquad_logs_v1';
-const LOCAL_STORAGE_USER = 'pitchsquad_current_user_v1';
-const LOCAL_STORAGE_ADMIN = 'pitchsquad_is_admin_v1';
+const LOCAL_STORAGE_PLAYERS = 'mrmanager_players_v2';
+const LOCAL_STORAGE_MATCHES = 'mrmanager_matches_v2';
+const LOCAL_STORAGE_LOGS = 'mrmanager_logs_v2';
+const LOCAL_STORAGE_USER = 'mrmanager_current_user_v2';
+const LOCAL_STORAGE_ADMIN = 'mrmanager_is_admin_v2';
+
+// Clear legacy mock storage keys if present
+try {
+  ['pitchsquad_players_v1', 'pitchsquad_matches_v1', 'pitchsquad_logs_v1'].forEach(k => {
+    localStorage.removeItem(k);
+  });
+} catch {}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [players, setPlayers] = useState<Player[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_PLAYERS);
-      return saved ? JSON.parse(saved) : INITIAL_PLAYERS;
+      const parsed: Player[] = saved ? JSON.parse(saved) : INITIAL_PLAYERS;
+      // Filter out any legacy p1..p12 mock players
+      const realAccounts = parsed.filter(p => !p.id.match(/^p[1-9]$|^p1[0-2]$/));
+      // Ensure Vatsal (vatsv3temp@gmail.com) is present
+      const hasVatsal = realAccounts.some(p => p.email?.toLowerCase() === 'vatsv3temp@gmail.com' || p.id === 'p_vatsal');
+      if (!hasVatsal) {
+        return [INITIAL_PLAYERS[0], ...realAccounts];
+      }
+      return realAccounts.length > 0 ? realAccounts : INITIAL_PLAYERS;
     } catch {
       return INITIAL_PLAYERS;
     }
@@ -100,7 +115,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [matches, setMatches] = useState<Match[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_MATCHES);
-      return saved ? JSON.parse(saved) : INITIAL_MATCHES;
+      const parsed: Match[] = saved ? JSON.parse(saved) : INITIAL_MATCHES;
+      return parsed.filter(m => !['m1', 'm2', 'm3'].includes(m.id));
     } catch {
       return INITIAL_MATCHES;
     }
@@ -109,7 +125,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [ratingLogs, setRatingLogs] = useState<RatingLog[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_LOGS);
-      return saved ? JSON.parse(saved) : INITIAL_RATING_LOGS;
+      const parsed: RatingLog[] = saved ? JSON.parse(saved) : INITIAL_RATING_LOGS;
+      return parsed.filter(l => !l.id.startsWith('log'));
     } catch {
       return INITIAL_RATING_LOGS;
     }
@@ -120,7 +137,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(LOCAL_STORAGE_USER);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) return parsed;
+        if (parsed && parsed.id && !parsed.id.match(/^p[1-9]$|^p1[0-2]$/)) return parsed;
       }
       return null;
     } catch {
@@ -131,7 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_ADMIN);
-      return saved ? JSON.parse(saved) : true; // Default admin true for frictionless access
+      return saved ? JSON.parse(saved) : true;
     } catch {
       return true;
     }
@@ -721,6 +738,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
+  const setCurrentUserHandler = (user: Player | null) => {
+    setCurrentUser(user);
+    if (user) {
+      if (user.email?.toLowerCase() === 'vatsv3temp@gmail.com' || user.id === 'p_vatsal' || user.isAdmin || user.role === 'admin') {
+        setIsAdmin(true);
+      }
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -734,7 +760,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedPlayerId,
         timeFilter,
 
-        setCurrentUser,
+        setCurrentUser: setCurrentUserHandler,
         logout,
         setIsAdmin,
         setActiveTab,

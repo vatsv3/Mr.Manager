@@ -36,6 +36,8 @@ export interface Player {
   id: string;
   uid?: string; // Firebase Auth User UID
   email?: string; // Authentication account email
+  isAdmin?: boolean;
+  role?: 'admin' | 'player';
   name: string;
   photo: string;
   primaryPosition: FootballPosition;

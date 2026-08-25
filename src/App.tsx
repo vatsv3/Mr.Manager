@@ -21,11 +21,9 @@ const MainLayout: React.FC = () => {
   const [createMatchModalOpen, setCreateMatchModalOpen] = useState(false);
   const [supabaseModalOpen, setSupabaseModalOpen] = useState(false);
   const [isPhoneFrame, setIsPhoneFrame] = useState(false);
-  const [isGuest, setIsGuest] = useState(false);
-
-  // If no user is logged in and not explicitly guest, show the landing auth page
-  if (!currentUser && !isGuest) {
-    return <AuthLandingView onGuestContinue={() => setIsGuest(true)} />;
+  // Only valid authenticated accounts can access the app
+  if (!currentUser) {
+    return <AuthLandingView />;
   }
 
   return (
