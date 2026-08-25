@@ -6,7 +6,7 @@ import { Star, Award, Shield, Trophy, Activity, Target, Flame, Edit3, ArrowLeft,
 import { useNavigate, useParams, Link } from 'react-router-dom';
 
 export const ProfilePage: React.FC = () => {
-  const { currentUser, players, getPlayerAggregatedStats, setEditPlayerId } = useApp();
+  const { currentUser, players, getPlayerAggregatedStats, setEditPlayerId, isAdmin } = useApp();
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
 
@@ -46,7 +46,7 @@ export const ProfilePage: React.FC = () => {
         <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
           Player Profile
         </span>
-        {isSelf ? (
+        {isSelf || isAdmin ? (
           <button
             onClick={() => setEditPlayerId(targetPlayer.id)}
             className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 transition"

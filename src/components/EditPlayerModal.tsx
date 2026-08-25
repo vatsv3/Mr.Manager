@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { Player, FootballPosition } from '../types';
 import { ALL_POSITIONS, AVAILABLE_TRAITS } from '../data/constants';
 import { PlayerAvatar } from './PlayerAvatar';
-import { Upload, X, Shield, Star, Trash2, Shirt, Image } from 'lucide-react';
+import { uploadPlayerAvatar } from '../lib/imageStorage';
+import { Upload, X, Shield, Star, Trash2, Shirt, Image, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface EditPlayerModalProps {
   player: Player;
@@ -11,8 +12,9 @@ interface EditPlayerModalProps {
 }
 
 export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClose }) => {
-  const { updatePlayer, deletePlayer, isAdmin } = useApp();
+  const { updatePlayer, deletePlayer, isAdmin, currentUser } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSelf = currentUser?.id === player.id;
 
   const [name, setName] = useState(player.name || '');
   const [jerseyNumber, setJerseyNumber] = useState<number | string>(player.jerseyNumber || '');
@@ -28,6 +30,10 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
       ? 'custom'
       : 'jersey'
   );
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>(player.primaryPosition || 'CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(
     player.secondaryPositions && player.secondaryPositions.length > 0
@@ -58,17 +64,29 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
     setSecondaryPositions(prev => prev.filter(p => p !== pos));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setPhoto(reader.result);
-          setPhotoMode('custom');
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    try {
+      setIsUploadingPhoto(true);
+      setUploadError(null);
+      setUploadMessage('Optimizing & uploading photo to cloud...');
+
+      const result = await uploadPlayerAvatar(file, player.id);
+      setPhoto(result.url);
+      setPhotoMode('custom');
+      setUploadMessage(result.isCloudStorage ? 'Uploaded to Firebase Storage!' : 'Photo optimized & saved ready for cloud sync!');
+      setTimeout(() => setUploadMessage(null), 4000);
+    } catch (err: any) {
+      console.error('Photo upload error:', err);
+      setUploadError(err?.message || 'Failed to process image');
+    } finally {
+      setIsUploadingPhoto(false);
+      // Reset input value so same file can be reselected if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -96,14 +114,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
     onClose();
   };
 
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to permanently delete ${player.name}'s profile?`)) {
-      deletePlayer(player.id);
-      onClose();
-    }
-  };
-
-  if (!isAdmin) {
+  if (!isAdmin && !isSelf) {
     return null;
   }
 
@@ -117,8 +128,12 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-amber-400" />
             <div>
-              <h3 className="text-sm font-semibold text-zinc-100">Edit Player Profile</h3>
-              <p className="text-[11px] text-zinc-500">Admin Control: Assign ratings & FC Mobile playstyles</p>
+              <h3 className="text-sm font-semibold text-zinc-100">
+                {isAdmin ? 'Edit Player Profile' : 'Edit My Profile'}
+              </h3>
+              <p className="text-[11px] text-zinc-500">
+                {isAdmin ? 'Admin Control: Assign ratings & FC Mobile playstyles' : 'Update your personal squad details'}
+              </p>
             </div>
           </div>
           <button
@@ -179,28 +194,55 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
                     Displaying solid position jersey (#{effectiveJerseyNumber || '—'} • {primaryPosition})
                   </p>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={photo}
-                      onChange={e => setPhoto(e.target.value)}
-                      placeholder="Paste image URL..."
-                      className="flex-1 min-w-0 bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-zinc-100 text-xs focus:outline-none focus:border-emerald-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs flex items-center gap-1 shrink-0 transition"
-                    >
-                      <Upload className="w-3.5 h-3.5" /> Upload
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={photo.startsWith('data:') ? '' : photo}
+                        onChange={e => setPhoto(e.target.value)}
+                        placeholder="Paste image URL or upload..."
+                        className="flex-1 min-w-0 bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-zinc-100 text-xs focus:outline-none focus:border-emerald-500 placeholder-zinc-600"
+                      />
+                      <button
+                        type="button"
+                        disabled={isUploadingPhoto}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-semibold rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition disabled:opacity-50"
+                      >
+                        {isUploadingPhoto ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" /> Upload File
+                          </>
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {uploadMessage && (
+                      <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> {uploadMessage}
+                      </p>
+                    )}
+                    {uploadError && (
+                      <p className="text-[11px] text-rose-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {uploadError}
+                      </p>
+                    )}
+                    {photo && !isUploadingPhoto && (
+                      <p className="text-[10px] text-zinc-500">
+                        {photo.startsWith('http') ? '🌐 Cloud Image URL' : '🖼️ Optimized Image Attached'}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -383,34 +425,36 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({ player, onClos
 
           {/* Footer Save & Delete */}
           <div className="pt-2 flex items-center gap-2 border-t border-zinc-800">
-            {confirmDelete ? (
-              <div className="flex items-center gap-1.5">
+            {isAdmin && (
+              confirmDelete ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deletePlayer(player.id);
+                      onClose();
+                    }}
+                    className="py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Confirm Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="py-2 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    deletePlayer(player.id);
-                    onClose();
-                  }}
-                  className="py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1"
+                  onClick={() => setConfirmDelete(true)}
+                  className="py-2 px-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Confirm Delete
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="py-2 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="py-2 px-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
+              )
             )}
             <button
               type="submit"

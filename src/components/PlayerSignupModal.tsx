@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { FootballPosition } from '../types';
 import { ALL_POSITIONS, AVAILABLE_TRAITS } from '../data/constants';
 import { PlayerAvatar } from './PlayerAvatar';
-import { Upload, X, Check, Shirt, Image } from 'lucide-react';
+import { uploadPlayerAvatar } from '../lib/imageStorage';
+import { Upload, X, Check, Shirt, Image, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface PlayerSignupModalProps {
   onClose: () => void;
@@ -17,6 +18,10 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
   const [jerseyNumber, setJerseyNumber] = useState<number>(10);
   const [photoType, setPhotoType] = useState<'jersey' | 'upload'>('jersey');
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>('');
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const [primaryPosition, setPrimaryPosition] = useState<FootballPosition>('CAM');
   const [secondaryPositions, setSecondaryPositions] = useState<FootballPosition[]>(['CM', 'LW']);
 
@@ -32,17 +37,28 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
     setSecondaryPositions(prev => prev.filter(p => p !== pos));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setUploadedPhotoUrl(reader.result);
-          setPhotoType('upload');
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    try {
+      setIsUploadingPhoto(true);
+      setUploadError(null);
+      setUploadStatusMsg('Optimizing & uploading to cloud...');
+
+      const result = await uploadPlayerAvatar(file, name.trim() || 'new_player');
+      setUploadedPhotoUrl(result.url);
+      setPhotoType('upload');
+      setUploadStatusMsg(result.isCloudStorage ? 'Uploaded to Firebase Cloud Storage!' : 'Photo optimized & ready for sync!');
+      setTimeout(() => setUploadStatusMsg(null), 4000);
+    } catch (err: any) {
+      console.error('Signup photo upload error:', err);
+      setUploadError(err?.message || 'Failed to process image');
+    } finally {
+      setIsUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -146,16 +162,22 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
               {/* Upload Photo */}
               <div
                 onClick={() => {
-                  setPhotoType('upload');
-                  fileInputRef.current?.click();
+                  if (!isUploadingPhoto) {
+                    setPhotoType('upload');
+                    fileInputRef.current?.click();
+                  }
                 }}
                 className={`p-2.5 rounded-lg border flex items-center space-x-2.5 transition cursor-pointer ${
                   photoType === 'upload'
                     ? 'bg-zinc-800 border-emerald-500 text-zinc-100'
                     : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/40'
-                }`}
+                } ${isUploadingPhoto ? 'opacity-70 pointer-events-none' : ''}`}
               >
-                {uploadedPhotoUrl ? (
+                {isUploadingPhoto ? (
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : uploadedPhotoUrl ? (
                   <img
                     src={uploadedPhotoUrl}
                     alt="Uploaded"
@@ -168,10 +190,10 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
                 )}
                 <div className="min-w-0">
                   <span className="text-xs font-medium block text-zinc-200">
-                    {uploadedPhotoUrl ? 'Photo Added' : 'Custom Photo'}
+                    {isUploadingPhoto ? 'Uploading to Cloud...' : uploadedPhotoUrl ? 'Photo Added' : 'Custom Photo'}
                   </span>
                   <span className="text-[10px] text-zinc-500">
-                    {uploadedPhotoUrl ? 'Click to change' : 'Upload photo'}
+                    {isUploadingPhoto ? 'Optimizing image' : uploadedPhotoUrl ? 'Click to change' : 'Upload photo'}
                   </span>
                 </div>
 
@@ -186,13 +208,25 @@ export const PlayerSignupModal: React.FC<PlayerSignupModalProps> = ({ onClose })
             </div>
 
             {photoType === 'upload' && (
-              <input
-                type="url"
-                value={uploadedPhotoUrl.startsWith('data:') ? '' : uploadedPhotoUrl}
-                onChange={e => setUploadedPhotoUrl(e.target.value)}
-                placeholder="Or paste photo URL..."
-                className="w-full bg-zinc-950/60 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 focus:outline-none"
-              />
+              <div className="space-y-1">
+                <input
+                  type="url"
+                  value={uploadedPhotoUrl.startsWith('data:') ? '' : uploadedPhotoUrl}
+                  onChange={e => setUploadedPhotoUrl(e.target.value)}
+                  placeholder="Or paste photo URL..."
+                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 focus:outline-none"
+                />
+                {uploadStatusMsg && (
+                  <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> {uploadStatusMsg}
+                  </p>
+                )}
+                {uploadError && (
+                  <p className="text-[11px] text-rose-400 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {uploadError}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
