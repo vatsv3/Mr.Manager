@@ -55,6 +55,15 @@ export type MatchFormat = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '11v11';
 
 export type MatchStatus = 'UPCOMING' | 'LIVE' | 'RATING_OPEN' | 'RATING_CLOSED';
 
+export interface MatchComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorPhoto?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface PlayerTacticalSpot {
   playerId: string;
   positionCode: FootballPosition;
@@ -119,6 +128,7 @@ export interface Match {
   mvpPlayerId?: string;
   mvpScore?: number; // Computed score for MVP calculation
   calculatedStats?: Record<string, PlayerMatchComputedStats>;
+  comments?: MatchComment[];
 }
 
 export type TimeFilter = '1m' | '2m' | '3m' | 'all';

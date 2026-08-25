@@ -600,8 +600,88 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Match Comments Section */}
+          <MatchComments match={match} />
         </div>
       </div>
+    </div>
+  );
+};
+
+const MatchComments = ({ match }: { match: Match }) => {
+  const { currentUser, addMatchComment } = useApp();
+  const [commentText, setCommentText] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || !currentUser) return;
+    addMatchComment(match.id, commentText.trim());
+    setCommentText('');
+  };
+
+  return (
+    <div className="pt-4 mt-2 border-t border-zinc-800/80 space-y-3">
+      <h4 className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+        <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        Match Discussion ({match.comments?.length || 0})
+      </h4>
+      
+      {/* Existing Comments */}
+      {match.comments && match.comments.length > 0 ? (
+        <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+          {match.comments.map(c => (
+            <div key={c.id} className="flex space-x-2 bg-zinc-950/40 rounded-lg p-2.5 border border-zinc-800/50">
+              {c.authorPhoto ? (
+                <img src={c.authorPhoto} alt={c.authorName} className="w-6 h-6 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {c.authorName.charAt(0)}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center space-x-1.5 mb-0.5">
+                  <span className="text-[11px] font-medium text-zinc-200">{c.authorName}</span>
+                  <span className="text-[9px] text-zinc-500">
+                    {new Date(c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-300 leading-snug">{c.content}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 text-[11px] text-zinc-500">
+          No comments yet. Be the first to start the discussion!
+        </div>
+      )}
+
+      {/* Add Comment Form */}
+      {currentUser ? (
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={commentText}
+            onChange={e => setCommentText(e.target.value)}
+            placeholder="Add a comment..."
+            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/50"
+          />
+          <button
+            type="submit"
+            disabled={!commentText.trim()}
+            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium rounded-lg text-xs transition"
+          >
+            Post
+          </button>
+        </form>
+      ) : (
+        <div className="text-center py-2 text-[10px] text-zinc-500">
+          Select your player profile to add a comment.
+        </div>
+      )}
     </div>
   );
 };

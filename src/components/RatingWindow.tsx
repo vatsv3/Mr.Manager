@@ -125,6 +125,7 @@ export const RatingWindow: React.FC = () => {
 
   const isWindowOpen = activeRatingMatch.status === 'RATING_OPEN';
   const hasAlreadyVoted = userLogsForMatch.length > 0;
+  const isParticipant = currentUser ? participants.some(p => p.playerId === currentUser.id) : false;
   const ratingTargets = participants.filter(s => s.playerId !== currentUser?.id);
 
   // Filtered by selected team tab
@@ -226,6 +227,17 @@ export const RatingWindow: React.FC = () => {
           <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
           <p>Select a player profile from the top header to submit your peer ratings.</p>
         </div>
+      ) : !isParticipant && !isAdmin ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-400 flex items-center space-x-2.5">
+          <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <p>Only players who participated in this match can submit ratings.</p>
+        </div>
+      ) : hasAlreadyVoted ? (
+        <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3.5 text-xs text-emerald-400 flex flex-col items-center justify-center space-y-2 text-center">
+          <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1" />
+          <p className="font-semibold text-emerald-300">Ratings Submitted Successfully!</p>
+          <p className="text-[10px] text-emerald-500/80">Thank you for voting. You can only vote once per match.</p>
+        </div>
       ) : (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2.5 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-2">
@@ -233,11 +245,10 @@ export const RatingWindow: React.FC = () => {
             <div>
               <p className="font-medium text-zinc-200">Voting as {currentUser.name}</p>
               <p className="text-[10px] text-zinc-500">
-                {hasAlreadyVoted ? 'Ratings submitted (can update anytime)' : 'Ready to submit'}
+                Ready to submit
               </p>
             </div>
           </div>
-
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
             {ratingTargets.length} total
           </span>
@@ -332,7 +343,7 @@ export const RatingWindow: React.FC = () => {
       )}
 
       {/* RATING CARDS */}
-      {isWindowOpen && currentUser && (
+      {isWindowOpen && currentUser && isParticipant && !hasAlreadyVoted && (
         <div className="space-y-3">
           {filteredTargets.map(spot => {
             const player = players.find(p => p.id === spot.playerId);

@@ -65,6 +65,7 @@ interface AppContextType {
   addGoalEvent: (matchId: string, goal: Omit<GoalEvent, 'id'>) => void;
   removeGoalEvent: (matchId: string, goalId: string) => void;
   updateScoreline: (matchId: string, scoreA: number, scoreB: number) => void;
+  addMatchComment: (matchId: string, content: string) => void;
   
   // Ratings & MVP Window
   startRatingWindow: (matchId: string) => void;
@@ -612,6 +613,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const addMatchComment = (matchId: string, content: string) => {
+    if (!currentUser) return;
+    setMatches(prev => {
+      const updated = prev.map(m => {
+        if (m.id !== matchId) return m;
+        const newComment = {
+          id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          authorId: currentUser.id,
+          authorName: currentUser.name,
+          authorPhoto: currentUser.photo,
+          content,
+          createdAt: new Date().toISOString()
+        };
+        return {
+          ...m,
+          comments: [...(m.comments || []), newComment]
+        };
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
+  };
+
   // Rating window workflows
   const startRatingWindow = (matchId: string) => {
     setMatches(prev => {
@@ -683,6 +708,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     mvpVotePlayerId?: string
   ) => {
     if (!currentUser) return;
+    
+    // Check if user already voted in this match
+    const alreadyVoted = ratingLogs.some(l => l.matchId === matchId && l.voterId === currentUser.id);
+    if (alreadyVoted) {
+      console.warn("User has already voted for this match.");
+      return;
+    }
 
     const newLogs: RatingLog[] = [];
     const timestamp = new Date().toISOString();
@@ -796,6 +828,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addGoalEvent,
         removeGoalEvent,
         updateScoreline,
+        addMatchComment,
 
         startRatingWindow,
         stopRatingWindow,
