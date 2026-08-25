@@ -6,13 +6,20 @@
       "description": "Registered squad football players",
       "fields": {
         "id": { "type": "string", "description": "Unique player ID" },
+        "uid": { "type": "string", "description": "Auth UID" },
+        "email": { "type": "string", "description": "Email address" },
+        "isAdmin": { "type": "boolean", "description": "Admin privileges flag" },
+        "role": { "type": "string", "description": "Role: admin or player" },
         "name": { "type": "string", "description": "Player full name" },
         "jerseyNumber": { "type": "number", "description": "Jersey squad number" },
+        "nickname": { "type": "string", "description": "Player nickname / alias" },
+        "preferredFoot": { "type": "string", "description": "Right, Left, or Both" },
+        "baseRating": { "type": "number", "description": "Initial base rating assigned by admin" },
         "photo": { "type": "string", "description": "Avatar photo URL or base64" },
         "primaryPosition": { "type": "string", "description": "Primary pitch position" },
         "secondaryPosition": { "type": "string", "description": "Fallback secondary position" },
         "secondaryPositions": { "type": "array", "description": "Array of secondary positions" },
-        "traits": { "type": "array", "description": "Player traits" },
+        "traits": { "type": "array", "description": "Player traits / FC Mobile playstyles" },
         "createdAt": { "type": "string", "description": "Creation timestamp" }
       },
       "indexes": []

@@ -36,6 +36,7 @@ interface AppContextType {
   activeTab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players';
   selectedMatchId: string | null;
   selectedPlayerId: string | null;
+  editPlayerId: string | null;
   timeFilter: TimeFilter;
   
   // Actions
@@ -45,6 +46,7 @@ interface AppContextType {
   setActiveTab: (tab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players') => void;
   setSelectedMatchId: (id: string | null) => void;
   setSelectedPlayerId: (id: string | null) => void;
+  setEditPlayerId: (id: string | null) => void;
   setTimeFilter: (filter: TimeFilter) => void;
   
   // Player CRUD
@@ -424,10 +426,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updatePlayer = (id: string, playerData: Partial<Player>) => {
     setPlayers(prev => {
-      const updated = prev.map(p => (p.id === id ? { ...p, ...playerData } : p));
+      const updated = prev.map(p => {
+        if (p.id === id) {
+          const merged: Player = { ...p, ...playerData };
+          return merged;
+        }
+        return p;
+      });
       const target = updated.find(p => p.id === id);
       if (target) {
         syncPlayerToFirestore(target);
+      }
+      try {
+        localStorage.setItem(LOCAL_STORAGE_PLAYERS, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save players to localStorage:', e);
       }
       return updated;
     });
@@ -759,6 +772,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeTab,
         selectedMatchId,
         selectedPlayerId,
+        editPlayerId,
         timeFilter,
 
         setCurrentUser: setCurrentUserHandler,
@@ -767,6 +781,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveTab,
         setSelectedMatchId,
         setSelectedPlayerId,
+        setEditPlayerId,
         setTimeFilter,
 
         addPlayer,

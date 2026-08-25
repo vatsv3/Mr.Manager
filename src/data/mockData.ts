@@ -10,11 +10,12 @@ export const INITIAL_PLAYERS: Player[] = [
     photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
     primaryPosition: 'GK',
     secondaryPosition: 'CB',
-    secondaryPositions: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM'],
+    secondaryPositions: ['CB', 'LB', 'RB', 'CDM'],
     traits: ['deflector', 'rush_out', 'guardian', 'anticipate', 'bullet_pass', 'relentless'],
     jerseyNumber: 1,
     nickname: 'The Wall & Captain',
     preferredFoot: 'Right',
+    baseRating: 8.5,
     createdAt: '2026-06-01T10:00:00Z',
   },
 ];
@@ -22,3 +23,4 @@ export const INITIAL_PLAYERS: Player[] = [
 export const INITIAL_MATCHES: Match[] = [];
 
 export const INITIAL_RATING_LOGS: RatingLog[] = [];
+
