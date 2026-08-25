@@ -28,27 +28,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
-      {/* Desktop Floating Control for Supabase Sync & Mobile Frame */}
-      <div className="hidden lg:flex fixed top-3.5 right-4 z-50 items-center space-x-2 bg-zinc-900/90 border border-zinc-800 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
-        <button
-          onClick={() => setSupabaseModalOpen(true)}
-          className="flex items-center gap-1.5 text-xs text-zinc-300 hover:text-emerald-400 font-medium px-2 py-1 rounded-md transition"
-        >
-          <Database className="w-3.5 h-3.5 text-emerald-400" /> Database & SQL
-        </button>
-
-        <span className="w-px h-3.5 bg-zinc-800" />
-
-        <button
-          onClick={() => setIsPhoneFrame(!isPhoneFrame)}
-          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 font-medium px-2 py-1 rounded-md transition"
-          title="Toggle Mobile Simulator Shell"
-        >
-          {isPhoneFrame ? <Monitor className="w-3.5 h-3.5" /> : <Smartphone className="w-3.5 h-3.5" />}
-          <span>{isPhoneFrame ? 'Full Screen' : 'Mobile View'}</span>
-        </button>
-      </div>
-
       {/* Main App Container */}
       <div
         className={`w-full mx-auto transition-all duration-200 flex-1 flex flex-col ${
