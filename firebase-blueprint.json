@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PitchSquad Cloud Firestore Schema",
+  "entities": {
+    "players": {
+      "description": "Registered squad football players",
+      "fields": {
+        "id": { "type": "string", "description": "Unique player ID" },
+        "name": { "type": "string", "description": "Player full name" },
+        "jerseyNumber": { "type": "number", "description": "Jersey squad number" },
+        "photo": { "type": "string", "description": "Avatar photo URL or base64" },
+        "primaryPosition": { "type": "string", "description": "Primary pitch position" },
+        "secondaryPosition": { "type": "string", "description": "Fallback secondary position" },
+        "secondaryPositions": { "type": "array", "description": "Array of secondary positions" },
+        "traits": { "type": "array", "description": "Player traits" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "indexes": []
+    },
+    "matches": {
+      "description": "Football match records and lineups",
+      "fields": {
+        "id": { "type": "string", "description": "Unique match ID" },
+        "title": { "type": "string", "description": "Match title" },
+        "date": { "type": "string", "description": "Date string" },
+        "time": { "type": "string", "description": "Kickoff time" },
+        "venue": { "type": "string", "description": "Turf ground venue" },
+        "format": { "type": "string", "description": "e.g. 5v5, 7v7, 11v11" },
+        "status": { "type": "string", "description": "UPCOMING, RATING_OPEN, RATING_CLOSED" },
+        "scoreA": { "type": "number", "description": "Team A goals" },
+        "scoreB": { "type": "number", "description": "Team B goals" },
+        "teamA": { "type": "object", "description": "Team A name, kit color, lineup" },
+        "teamB": { "type": "object", "description": "Team B name, kit color, lineup" },
+        "goals": { "type": "array", "description": "List of goals scored" },
+        "mvpPlayerId": { "type": "string", "description": "MVP player ID" },
+        "ratingWindowEndsAt": { "type": "string", "description": "Rating window end time" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "indexes": []
+    },
+    "ratingLogs": {
+      "description": "Anonymous or peer rating submissions per match",
+      "fields": {
+        "id": { "type": "string", "description": "Unique log ID" },
+        "matchId": { "type": "string", "description": "Associated match ID" },
+        "raterId": { "type": "string", "description": "Player who gave the rating" },
+        "targetId": { "type": "string", "description": "Rated player ID" },
+        "rating": { "type": "number", "description": "Score between 1.0 and 10.0" },
+        "feedback": { "type": "string", "description": "Constructive comment" },
+        "tags": { "type": "array", "description": "Feedback badges" },
+        "timestamp": { "type": "string", "description": "ISO timestamp" },
+        "isVerified": { "type": "boolean", "description": "Verification flag" }
+      },
+      "indexes": []
+    }
+  }
+}

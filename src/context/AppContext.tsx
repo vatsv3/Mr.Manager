@@ -12,6 +12,18 @@ import {
 } from '../types';
 import { INITIAL_PLAYERS, INITIAL_MATCHES, INITIAL_RATING_LOGS } from '../data/mockData';
 import confetti from 'canvas-confetti';
+import {
+  seedFirestoreIfEmpty,
+  subscribeToPlayers,
+  subscribeToMatches,
+  subscribeToRatingLogs,
+  syncPlayerToFirestore,
+  deletePlayerFromFirestore,
+  syncMatchToFirestore,
+  deleteMatchFromFirestore,
+  syncRatingLogToFirestore,
+  deleteRatingLogFromFirestore,
+} from '../lib/firestoreService';
 
 interface AppContextType {
   players: Player[];
@@ -126,6 +138,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(matches[0]?.id || null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+
+  // Initialize Firestore listeners & initial seeding
+  useEffect(() => {
+    // Seed sample data to Firestore if completely empty
+    seedFirestoreIfEmpty();
+
+    const unsubPlayers = subscribeToPlayers(remotePlayers => {
+      if (remotePlayers && remotePlayers.length > 0) {
+        setPlayers(remotePlayers);
+      }
+    });
+
+    const unsubMatches = subscribeToMatches(remoteMatches => {
+      if (remoteMatches && remoteMatches.length > 0) {
+        setMatches(remoteMatches);
+      }
+    });
+
+    const unsubLogs = subscribeToRatingLogs(remoteLogs => {
+      setRatingLogs(remoteLogs || []);
+    });
+
+    return () => {
+      unsubPlayers();
+      unsubMatches();
+      unsubLogs();
+    };
+  }, []);
 
   // LocalStorage sync
   useEffect(() => {
@@ -357,11 +397,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setPlayers(prev => [newPlayer, ...prev]);
+    syncPlayerToFirestore(newPlayer);
     return newPlayer;
   };
 
   const updatePlayer = (id: string, playerData: Partial<Player>) => {
-    setPlayers(prev => prev.map(p => (p.id === id ? { ...p, ...playerData } : p)));
+    setPlayers(prev => {
+      const updated = prev.map(p => (p.id === id ? { ...p, ...playerData } : p));
+      const target = updated.find(p => p.id === id);
+      if (target) {
+        syncPlayerToFirestore(target);
+      }
+      return updated;
+    });
     if (currentUser?.id === id) {
       setCurrentUser(prev => (prev ? { ...prev, ...playerData } : null));
     }
@@ -370,6 +418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deletePlayer = (id: string) => {
     setPlayers(prev => prev.filter(p => p.id !== id));
     setRatingLogs(prev => prev.filter(l => l.voterId !== id && l.ratedPlayerId !== id));
+    deletePlayerFromFirestore(id);
     if (currentUser?.id === id) {
       const remaining = players.filter(p => p.id !== id);
       setCurrentUser(remaining[0] || null);
@@ -388,11 +437,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setMatches(prev => [newMatch, ...prev]);
     setSelectedMatchId(newMatch.id);
+    syncMatchToFirestore(newMatch);
     return newMatch;
   };
 
   const updateMatch = (id: string, matchData: Partial<Match>) => {
-    setMatches(prev => prev.map(m => (m.id === id ? { ...m, ...matchData } : m)));
+    setMatches(prev => {
+      const updated = prev.map(m => (m.id === id ? { ...m, ...matchData } : m));
+      const target = updated.find(m => m.id === id);
+      if (target) {
+        syncMatchToFirestore(target);
+      }
+      return updated;
+    });
   };
 
   const deleteMatch = (id: string) => {
@@ -406,6 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       return remaining;
     });
+    deleteMatchFromFirestore(id);
     setRatingLogs(prev => prev.filter(l => l.matchId !== id));
   };
 
@@ -418,8 +476,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     y: number,
     positionCode?: FootballPosition
   ) => {
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         const currentLineup = [...m[team].lineup];
         const existingIdx = currentLineup.findIndex(s => s.playerId === playerId);
@@ -447,8 +505,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lineup: currentLineup,
           },
         };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   const setFormationPreset = (matchId: string, format: MatchFormat, presetName: string) => {
@@ -471,8 +532,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `g_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     };
 
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         const updatedGoals = [...m.goals, goal];
         const newScoreA = updatedGoals.filter(g => g.team === 'teamA').length;
@@ -483,13 +544,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           scoreA: newScoreA,
           scoreB: newScoreB,
         };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   const removeGoalEvent = (matchId: string, goalId: string) => {
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         const updatedGoals = m.goals.filter(g => g.id !== goalId);
         const newScoreA = updatedGoals.filter(g => g.team === 'teamA').length;
@@ -500,36 +564,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           scoreA: newScoreA,
           scoreB: newScoreB,
         };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   const updateScoreline = (matchId: string, scoreA: number, scoreB: number) => {
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         return { ...m, scoreA, scoreB };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   // Rating window workflows
   const startRatingWindow = (matchId: string) => {
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         return {
           ...m,
-          status: 'RATING_OPEN',
+          status: 'RATING_OPEN' as const,
           ratingWindowStartedAt: new Date().toISOString(),
         };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   const stopRatingWindow = (matchId: string) => {
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         const { calculatedStats, computedMvpId, computedMvpScore } = computeMatchStats(m, ratingLogs);
 
@@ -546,26 +619,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         return {
           ...m,
-          status: 'RATING_CLOSED',
+          status: 'RATING_CLOSED' as const,
           ratingWindowEndedAt: new Date().toISOString(),
           mvpPlayerId: computedMvpId,
           mvpScore: computedMvpScore,
           calculatedStats,
         };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   const resumeRatingWindow = (matchId: string) => {
-    setMatches(prev =>
-      prev.map(m => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
         if (m.id !== matchId) return m;
         return {
           ...m,
-          status: 'RATING_OPEN',
+          status: 'RATING_OPEN' as const,
         };
-      })
-    );
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
   };
 
   // Submit match ratings
@@ -584,7 +663,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (r.ratedPlayerId === currentUser.id) return;
 
       const ratedP = players.find(p => p.id === r.ratedPlayerId);
-      newLogs.push({
+      const newLog: RatingLog = {
         id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         matchId,
         voterId: currentUser.id,
@@ -595,7 +674,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mvpVotePlayerId: mvpVotePlayerId === r.ratedPlayerId ? mvpVotePlayerId : undefined,
         comment: r.comment,
         createdAt: timestamp,
-      });
+      };
+      newLogs.push(newLog);
+      syncRatingLogToFirestore(newLog);
     });
 
     setRatingLogs(prev => [...prev, ...newLogs]);
@@ -614,6 +695,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Delete a specific rating log entry (Admin power with real-time recalculation)
   const deleteRatingLog = (logId: string) => {
     setRatingLogs(prev => prev.filter(l => l.id !== logId));
+    deleteRatingLogFromFirestore(logId);
   };
 
   const activeRatingMatches = useMemo(() => {
