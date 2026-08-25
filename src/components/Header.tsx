@@ -12,6 +12,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
   const {
     currentUser,
     setCurrentUser,
+    logout,
     players,
     isAdmin,
     setIsAdmin,
@@ -188,13 +189,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewPlayerModal, onOpenNewM
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setUserDropdownOpen(false);
-                        setCurrentUser(null);
+                        await logout();
                       }}
                       className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition"
                     >
-                      <LogOut className="w-3 h-3" /> Log Out / Switch
+                      <LogOut className="w-3 h-3" /> Log Out Account
                     </button>
                   </div>
                 </div>

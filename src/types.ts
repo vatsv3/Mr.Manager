@@ -34,6 +34,8 @@ export interface PlayerTrait {
 
 export interface Player {
   id: string;
+  uid?: string; // Firebase Auth User UID
+  email?: string; // Authentication account email
   name: string;
   photo: string;
   primaryPosition: FootballPosition;

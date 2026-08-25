@@ -24,6 +24,8 @@ import {
   syncRatingLogToFirestore,
   deleteRatingLogFromFirestore,
 } from '../lib/firestoreService';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 interface AppContextType {
   players: Player[];
@@ -38,6 +40,7 @@ interface AppContextType {
   
   // Actions
   setCurrentUser: (player: Player | null) => void;
+  logout: () => Promise<void>;
   setIsAdmin: (isAdmin: boolean) => void;
   setActiveTab: (tab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs') => void;
   setSelectedMatchId: (id: string | null) => void;
@@ -706,6 +709,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [...ratingLogs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [ratingLogs]);
 
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn('Signout warning:', e);
+    }
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_USER);
+    } catch {}
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -720,6 +735,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         timeFilter,
 
         setCurrentUser,
+        logout,
         setIsAdmin,
         setActiveTab,
         setSelectedMatchId,
