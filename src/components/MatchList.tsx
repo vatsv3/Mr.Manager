@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Match, MatchStatus } from '../types';
 import { MatchDetailsModal } from './MatchDetailsModal';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export const MatchList: React.FC = () => {
+  const navigate = useNavigate();
   const {
     matches,
     players,
@@ -197,6 +199,7 @@ export const MatchList: React.FC = () => {
                     onClick={() => {
                       setSelectedMatchId(match.id);
                       setActiveTab('pitch');
+                      navigate('/pitch');
                     }}
                     className="flex-1 py-1.5 px-2 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 font-medium text-xs rounded-lg flex items-center justify-center gap-1 transition"
                   >
@@ -208,6 +211,7 @@ export const MatchList: React.FC = () => {
                       onClick={() => {
                         setSelectedMatchId(match.id);
                         setActiveTab('ratings');
+                        navigate('/ratings');
                       }}
                       className="flex-1 py-1.5 px-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs rounded-lg flex items-center justify-center gap-1 transition"
                     >
