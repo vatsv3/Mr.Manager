@@ -16,6 +16,9 @@ import {
   Minus,
   Plus,
   Users,
+  Loader2,
+  LogIn,
+  Eye,
 } from 'lucide-react';
 
 export const RatingWindow: React.FC = () => {
@@ -25,6 +28,8 @@ export const RatingWindow: React.FC = () => {
     setSelectedMatchId,
     players,
     currentUser,
+    isGuest,
+    logout,
     ratingLogs,
     isAdmin,
     startRatingWindow,
@@ -43,6 +48,8 @@ export const RatingWindow: React.FC = () => {
   const [selectedMvpId, setSelectedMvpId] = useState<string>('');
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<'all' | 'teamA' | 'teamB'>('all');
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const participants = activeRatingMatch
     ? [
@@ -62,12 +69,12 @@ export const RatingWindow: React.FC = () => {
     : [];
 
   const userLogsForMatch =
-    currentUser && activeRatingMatch
+    currentUser && activeRatingMatch && !isGuest
       ? ratingLogs.filter(l => l.matchId === activeRatingMatch.id && l.voterId === currentUser.id)
       : [];
 
   useEffect(() => {
-    if (!activeRatingMatch || !currentUser) return;
+    if (!activeRatingMatch || !currentUser || isGuest) return;
 
     const initial: Record<string, number> = {};
     let initialMvp = '';
@@ -86,7 +93,8 @@ export const RatingWindow: React.FC = () => {
     setLocalRatings(initial);
     setSelectedMvpId(initialMvp);
     setSubmittedSuccess(false);
-  }, [activeRatingMatch?.id, currentUser?.id]);
+    setSubmitError(null);
+  }, [activeRatingMatch?.id, currentUser?.id, isGuest]);
 
   if (!activeRatingMatch) {
     return (
@@ -109,8 +117,12 @@ export const RatingWindow: React.FC = () => {
     handleRatingChange(playerId, current + step);
   };
 
-  const handleSubmitAll = () => {
-    if (!currentUser) return;
+  const handleSubmitAll = async () => {
+    if (!currentUser || isGuest) return;
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
 
     const payload = Object.entries(localRatings).map(([ratedPlayerId, ratingVal]) => ({
       ratedPlayerId,
@@ -118,14 +130,24 @@ export const RatingWindow: React.FC = () => {
       comment: undefined,
     }));
 
-    submitMatchRatings(activeRatingMatch.id, payload, selectedMvpId || undefined);
-    setSubmittedSuccess(true);
-    setTimeout(() => setSubmittedSuccess(false), 4000);
+    try {
+      const success = await submitMatchRatings(activeRatingMatch.id, payload, selectedMvpId || undefined);
+      if (success) {
+        setSubmittedSuccess(true);
+      } else {
+        setSubmitError('Failed to record ratings. Please check your connection and try again.');
+      }
+    } catch (err) {
+      console.error('Error submitting ratings:', err);
+      setSubmitError('An unexpected error occurred while submitting ratings.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isWindowOpen = activeRatingMatch.status === 'RATING_OPEN';
   const hasAlreadyVoted = userLogsForMatch.length > 0;
-  const isParticipant = currentUser ? participants.some(p => p.playerId === currentUser.id) : false;
+  const isParticipant = currentUser && !isGuest ? participants.some(p => p.playerId === currentUser.id) : false;
   const ratingTargets = participants.filter(s => s.playerId !== currentUser?.id);
 
   // Filtered by selected team tab
@@ -196,7 +218,7 @@ export const RatingWindow: React.FC = () => {
         </div>
 
         {/* Admin Window Toggle */}
-        {isAdmin && (
+        {isAdmin && !isGuest && (
           <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
             <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
               <Shield className="w-3 h-3 text-zinc-400" /> Admin Control:
@@ -222,26 +244,68 @@ export const RatingWindow: React.FC = () => {
       </div>
 
       {/* User Status Notice */}
-      {!currentUser ? (
+      {isGuest ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-300 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <Eye className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-zinc-100">Exploring in Guest Mode</p>
+              <p className="text-zinc-400 text-[11px] leading-relaxed">
+                You are viewing match ratings as a guest spectator. Sign in to your player account to rate teammates, opponents, and vote for MOTM.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              await logout();
+            }}
+            className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
+          >
+            <LogIn className="w-3.5 h-3.5" /> Sign In to Rate Players
+          </button>
+        </div>
+      ) : !currentUser ? (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-400 flex items-center space-x-2.5">
           <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-          <p>Select a player profile from the top header to submit your peer ratings.</p>
+          <p>Please log in to submit your peer ratings.</p>
         </div>
       ) : !isParticipant && !isAdmin ? (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-400 flex items-center space-x-2.5">
           <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-          <p>Only players who participated in this match can submit ratings.</p>
+          <p>Only players who participated in this match squad can submit peer ratings.</p>
         </div>
       ) : hasAlreadyVoted ? (
-        <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3.5 text-xs text-emerald-400 flex flex-col items-center justify-center space-y-2 text-center">
-          <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1" />
-          <p className="font-semibold text-emerald-300">Ratings Submitted Successfully!</p>
-          <p className="text-[10px] text-emerald-500/80">Thank you for voting. You can only vote once per match.</p>
+        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-400 flex flex-col items-center justify-center space-y-2 text-center shadow-sm">
+          <CheckCircle2 className="w-8 h-8 text-emerald-400 mb-1" />
+          <p className="font-bold text-sm text-emerald-300">Ratings Recorded & Persisted!</p>
+          <p className="text-[11px] text-emerald-400/90 max-w-xs">
+            Your match ratings and MOTM vote have been saved to the club database. Each participant can only vote once per match.
+          </p>
+          
+          {/* Summary of submitted votes */}
+          <div className="w-full mt-3 pt-3 border-t border-emerald-500/20 text-left space-y-1.5">
+            <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+              Your Submitted Ballot ({userLogsForMatch.length} ratings):
+            </span>
+            <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
+              {userLogsForMatch.map(log => (
+                <div key={log.id} className="bg-zinc-950/70 border border-zinc-800 rounded-lg p-1.5 flex items-center justify-between text-[11px]">
+                  <span className="truncate text-zinc-200">{log.ratedPlayerName}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {log.mvpVotePlayerId && (
+                      <span className="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1 rounded">MOTM</span>
+                    )}
+                    <span className="font-bold text-emerald-400">{log.rating.toFixed(1)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2.5 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-2">
-            <img src={currentUser.photo} alt={currentUser.name} className="w-6 h-6 rounded-full object-cover" />
+            <PlayerAvatar player={currentUser} size="xs" showBadge={false} className="rounded-full" />
             <div>
               <p className="font-medium text-zinc-200">Voting as {currentUser.name}</p>
               <p className="text-[10px] text-zinc-500">
@@ -255,14 +319,24 @@ export const RatingWindow: React.FC = () => {
         </div>
       )}
 
+      {/* Submit Error Message */}
+      {submitError && (
+        <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-300 flex items-start space-x-2">
+          <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+          <p className="leading-tight">{submitError}</p>
+        </div>
+      )}
+
       {/* Rule Notice */}
-      <div className="border border-zinc-800/60 rounded-lg px-2.5 py-1.5 flex items-center space-x-2 text-[11px] text-zinc-400 bg-zinc-950/40">
-        <UserCheck className="w-3 h-3 text-zinc-400 flex-shrink-0" />
-        <span>Self-rating is excluded automatically.</span>
-      </div>
+      {!isGuest && isParticipant && !hasAlreadyVoted && (
+        <div className="border border-zinc-800/60 rounded-lg px-2.5 py-1.5 flex items-center space-x-2 text-[11px] text-zinc-400 bg-zinc-950/40">
+          <UserCheck className="w-3 h-3 text-zinc-400 flex-shrink-0" />
+          <span>Self-rating is excluded automatically.</span>
+        </div>
+      )}
 
       {/* Team Selection Option (Tab Filters) */}
-      {isWindowOpen && currentUser && (
+      {isWindowOpen && currentUser && !isGuest && isParticipant && !hasAlreadyVoted && (
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-1.5 flex items-center gap-1">
           <button
             type="button"
@@ -321,7 +395,7 @@ export const RatingWindow: React.FC = () => {
           <p className="text-xs text-zinc-500 max-w-xs mx-auto">
             Ratings for this match have either ended or not started yet.
           </p>
-          {isAdmin && (
+          {isAdmin && !isGuest && (
             <button
               onClick={() => resumeRatingWindow(activeRatingMatch.id)}
               className="mt-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium text-xs rounded-md inline-flex items-center gap-1 transition"
@@ -332,18 +406,8 @@ export const RatingWindow: React.FC = () => {
         </div>
       )}
 
-      {/* Submitted Success Banner */}
-      {submittedSuccess && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-300 flex items-center space-x-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          <div>
-            <p className="font-medium">Ratings and MOTM vote recorded successfully.</p>
-          </div>
-        </div>
-      )}
-
       {/* RATING CARDS */}
-      {isWindowOpen && currentUser && isParticipant && !hasAlreadyVoted && (
+      {isWindowOpen && currentUser && !isGuest && isParticipant && !hasAlreadyVoted && (
         <div className="space-y-3">
           {filteredTargets.map(spot => {
             const player = players.find(p => p.id === spot.playerId);
@@ -501,10 +565,20 @@ export const RatingWindow: React.FC = () => {
           <div className="pt-2 sticky bottom-20 z-30">
             <button
               onClick={handleSubmitAll}
-              className="w-full py-2.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition shadow-lg"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition shadow-lg disabled:opacity-50"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>Submit Ratings ({ratingTargets.length} Players)</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Saving Ratings to Database...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Submit Ratings ({ratingTargets.length} Players)</span>
+                </>
+              )}
             </button>
           </div>
         </div>

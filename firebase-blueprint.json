@@ -1,64 +1,101 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Mr.Manager Cloud Firestore Schema",
   "entities": {
-    "players": {
-      "description": "Registered squad football players",
-      "fields": {
-        "id": { "type": "string", "description": "Unique player ID" },
-        "uid": { "type": "string", "description": "Auth UID" },
-        "email": { "type": "string", "description": "Email address" },
-        "isAdmin": { "type": "boolean", "description": "Admin privileges flag" },
-        "role": { "type": "string", "description": "Role: admin or player" },
-        "name": { "type": "string", "description": "Player full name" },
-        "jerseyNumber": { "type": "number", "description": "Jersey squad number" },
-        "nickname": { "type": "string", "description": "Player nickname / alias" },
-        "preferredFoot": { "type": "string", "description": "Right, Left, or Both" },
-        "baseRating": { "type": "number", "description": "Initial base rating assigned by admin" },
-        "photo": { "type": "string", "description": "Avatar photo URL or base64" },
-        "primaryPosition": { "type": "string", "description": "Primary pitch position" },
-        "secondaryPosition": { "type": "string", "description": "Fallback secondary position" },
-        "secondaryPositions": { "type": "array", "description": "Array of secondary positions" },
-        "traits": { "type": "array", "description": "Player traits / FC Mobile playstyles" },
-        "createdAt": { "type": "string", "description": "Creation timestamp" }
+    "Player": {
+      "title": "Player",
+      "description": "Squad player profile and credentials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string", "maxLength": 100 },
+        "photo": { "type": "string" },
+        "primaryPosition": { "type": "string", "maxLength": 10 },
+        "secondaryPositions": { "type": "array" },
+        "traits": { "type": "array" },
+        "jerseyNumber": { "type": "number" },
+        "nickname": { "type": "string", "maxLength": 50 },
+        "baseRating": { "type": "number" },
+        "isAdmin": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["admin", "player", "guest"] },
+        "createdAt": { "type": "string" }
       },
-      "indexes": []
+      "required": ["id", "name", "primaryPosition", "createdAt"]
     },
-    "matches": {
-      "description": "Football match records and lineups",
-      "fields": {
-        "id": { "type": "string", "description": "Unique match ID" },
-        "title": { "type": "string", "description": "Match title" },
-        "date": { "type": "string", "description": "Date string" },
-        "time": { "type": "string", "description": "Kickoff time" },
-        "venue": { "type": "string", "description": "Turf ground venue" },
-        "format": { "type": "string", "description": "e.g. 5v5, 7v7, 11v11" },
-        "status": { "type": "string", "description": "UPCOMING, RATING_OPEN, RATING_CLOSED" },
-        "scoreA": { "type": "number", "description": "Team A goals" },
-        "scoreB": { "type": "number", "description": "Team B goals" },
-        "teamA": { "type": "object", "description": "Team A name, kit color, lineup" },
-        "teamB": { "type": "object", "description": "Team B name, kit color, lineup" },
-        "goals": { "type": "array", "description": "List of goals scored" },
-        "mvpPlayerId": { "type": "string", "description": "MVP player ID" },
-        "ratingWindowEndsAt": { "type": "string", "description": "Rating window end time" },
-        "createdAt": { "type": "string", "description": "Creation timestamp" }
+    "Match": {
+      "title": "Match",
+      "description": "Match fixture with lineups, goals, pre-computed stats and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "venue": { "type": "string", "maxLength": 150 },
+        "format": { "type": "string" },
+        "status": { "type": "string", "enum": ["UPCOMING", "LIVE", "RATING_OPEN", "RATING_CLOSED"] },
+        "scoreA": { "type": "number" },
+        "scoreB": { "type": "number" },
+        "teamA": { "type": "object" },
+        "teamB": { "type": "object" },
+        "goals": { "type": "array" },
+        "mvpPlayerId": { "type": "string" },
+        "mvpScore": { "type": "number" },
+        "calculatedStats": { "type": "object" },
+        "ratingWindowStartedAt": { "type": "string" },
+        "ratingWindowEndedAt": { "type": "string" }
       },
-      "indexes": []
+      "required": ["id", "title", "date", "status", "format"]
     },
-    "ratingLogs": {
-      "description": "Anonymous or peer rating submissions per match",
-      "fields": {
-        "id": { "type": "string", "description": "Unique log ID" },
-        "matchId": { "type": "string", "description": "Associated match ID" },
-        "raterId": { "type": "string", "description": "Player who gave the rating" },
-        "targetId": { "type": "string", "description": "Rated player ID" },
-        "rating": { "type": "number", "description": "Score between 1.0 and 10.0" },
-        "feedback": { "type": "string", "description": "Constructive comment" },
-        "tags": { "type": "array", "description": "Feedback badges" },
-        "timestamp": { "type": "string", "description": "ISO timestamp" },
-        "isVerified": { "type": "boolean", "description": "Verification flag" }
+    "MatchComment": {
+      "title": "MatchComment",
+      "description": "Subcollection comment item for match discussion threads",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
       },
-      "indexes": []
+      "required": ["id", "authorId", "authorName", "content", "createdAt"]
+    },
+    "RatingLog": {
+      "title": "RatingLog",
+      "description": "Granular peer rating record with deterministic ID",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matchId": { "type": "string" },
+        "voterId": { "type": "string" },
+        "voterName": { "type": "string", "maxLength": 100 },
+        "ratedPlayerId": { "type": "string" },
+        "ratedPlayerName": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "mvpVotePlayerId": { "type": "string" },
+        "comment": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "matchId", "voterId", "ratedPlayerId", "rating", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/players/{playerId}": {
+      "schema": { "$ref": "#/entities/Player" },
+      "description": "Squad player registry"
+    },
+    "/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/Match" },
+      "description": "Match fixtures and aggregated performance stats"
+    },
+    "/matches/{matchId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/MatchComment" },
+      "description": "Subcollection for scalable real-time match comments"
+    },
+    "/ratingLogs/{logId}": {
+      "schema": { "$ref": "#/entities/RatingLog" },
+      "description": "Individual peer ballot rating entries with deterministic keys"
     }
   }
 }

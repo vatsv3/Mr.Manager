@@ -37,7 +37,8 @@ export interface Player {
   uid?: string; // Firebase Auth User UID
   email?: string; // Authentication account email
   isAdmin?: boolean;
-  role?: 'admin' | 'player';
+  isGuest?: boolean;
+  role?: 'admin' | 'player' | 'guest';
   name: string;
   photo: string;
   primaryPosition: FootballPosition;
@@ -101,8 +102,12 @@ export interface RatingLog {
 }
 
 export interface PlayerMatchComputedStats {
-  avgRating: number;
+  avgRating: number; // FairPlay mitigated rating
+  rawRating?: number; // Raw arithmetic mean before outlier mitigation
+  fairPlayRating?: number;
   ratingCount: number;
+  outlierCount?: number;
+  confidenceScore?: number;
   mvpVotesCount: number;
   goals: number;
   assists: number;
@@ -127,6 +132,7 @@ export interface Match {
   ratingWindowEndedAt?: string;
   mvpPlayerId?: string;
   mvpScore?: number; // Computed score for MVP calculation
+  isNeutralized?: boolean; // When true, FairPlay outlier neutralization algorithm is applied
   calculatedStats?: Record<string, PlayerMatchComputedStats>;
   comments?: MatchComment[];
 }

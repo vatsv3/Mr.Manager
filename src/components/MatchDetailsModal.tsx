@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Match } from '../types';
+import { Match, MatchComment } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
+import { subscribeToMatchComments } from '../lib/firestoreService';
+import { calculateFairPlayRatings } from '../lib/ratingAlgorithms';
 import {
   Play,
   Square,
@@ -15,6 +17,9 @@ import {
   Award,
   ChevronRight,
   X,
+  ShieldCheck,
+  Sparkles,
+  Info,
 } from 'lucide-react';
 
 interface MatchDetailsModalProps {
@@ -33,9 +38,11 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
   const {
     players,
     isAdmin,
+    ratingLogs,
     startRatingWindow,
     stopRatingWindow,
     resumeRatingWindow,
+    toggleNeutralizeRatings,
     addGoalEvent,
     removeGoalEvent,
     deleteMatch,
@@ -556,6 +563,46 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
           </div>
         </div>
 
+        {/* Neutralize Ratings Admin Control & Status Banner */}
+        {ratingLogs.filter(l => l.matchId === match.id).length >= 1 && (
+          <div className={`p-3.5 rounded-xl border transition-all ${
+            match.isNeutralized
+              ? 'bg-emerald-950/25 border-emerald-500/40'
+              : 'bg-zinc-900/60 border-zinc-800/80'
+          }`}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className={`w-4 h-4 ${match.isNeutralized ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                <div>
+                  <span className="text-xs font-semibold text-zinc-200">
+                    {match.isNeutralized ? 'Ratings Neutralized (FairPlay Active)' : 'Standard Arithmetic Average'}
+                  </span>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {match.isNeutralized
+                      ? 'Outliers, spite downvotes, and extreme voter biases are mitigated.'
+                      : 'Raw arithmetic average is currently active. Goal contributions are excluded.'}
+                  </p>
+                </div>
+              </div>
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => toggleNeutralizeRatings(match.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition shrink-0 flex items-center gap-1.5 ${
+                    match.isNeutralized
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                      : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700 hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{match.isNeutralized ? 'Revert to Raw' : 'Neutralize Rating'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Delete Match Action */}
         <div className="pt-2 border-t border-zinc-800">
           {!showDeleteConfirm ? (
@@ -610,12 +657,30 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
 };
 
 const MatchComments = ({ match }: { match: Match }) => {
-  const { currentUser, addMatchComment } = useApp();
+  const { currentUser, isGuest, logout, addMatchComment } = useApp();
   const [commentText, setCommentText] = useState('');
+  const [subComments, setSubComments] = useState<MatchComment[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToMatchComments(match.id, comments => {
+      setSubComments(comments);
+    });
+    return () => unsubscribe();
+  }, [match.id]);
+
+  // Combine real-time subcollection comments with any legacy embedded comments
+  const combinedComments = useMemo(() => {
+    const legacy = match.comments || [];
+    const subColIds = new Set(subComments.map(c => c.id));
+    const uniqueLegacy = legacy.filter(c => !subColIds.has(c.id));
+    return [...uniqueLegacy, ...subComments].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }, [match.comments, subComments]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || !currentUser) return;
+    if (!commentText.trim() || !currentUser || isGuest) return;
     addMatchComment(match.id, commentText.trim());
     setCommentText('');
   };
@@ -626,13 +691,13 @@ const MatchComments = ({ match }: { match: Match }) => {
         <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-        Match Discussion ({match.comments?.length || 0})
+        Match Discussion ({combinedComments.length})
       </h4>
       
       {/* Existing Comments */}
-      {match.comments && match.comments.length > 0 ? (
+      {combinedComments.length > 0 ? (
         <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
-          {match.comments.map(c => (
+          {combinedComments.map(c => (
             <div key={c.id} className="flex space-x-2 bg-zinc-950/40 rounded-lg p-2.5 border border-zinc-800/50">
               {c.authorPhoto ? (
                 <img src={c.authorPhoto} alt={c.authorName} className="w-6 h-6 rounded-full object-cover shrink-0" />
@@ -660,7 +725,20 @@ const MatchComments = ({ match }: { match: Match }) => {
       )}
 
       {/* Add Comment Form */}
-      {currentUser ? (
+      {isGuest ? (
+        <div className="flex items-center justify-between p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800 text-xs">
+          <span className="text-zinc-400 text-[11px]">Sign in to participate in match discussions</span>
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+            }}
+            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 transition"
+          >
+            Sign In
+          </button>
+        </div>
+      ) : currentUser ? (
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"

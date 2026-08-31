@@ -19,6 +19,8 @@ import {
   Shirt,
   Image,
   Loader2,
+  Eye,
+  Compass,
 } from 'lucide-react';
 import { uploadPlayerAvatar } from '../lib/imageStorage';
 import { auth } from '../lib/firebase';
@@ -35,7 +37,7 @@ interface AuthLandingViewProps {
 }
 
 export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
-  const { players, setCurrentUser, addPlayer } = useApp();
+  const { players, setCurrentUser, addPlayer, continueAsGuest } = useApp();
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -755,6 +757,29 @@ export const AuthLandingView: React.FC<AuthLandingViewProps> = () => {
             </div>
           </form>
         )}
+
+        {/* Guest Mode Exploration Barrier */}
+        <div className="pt-3 border-t border-zinc-800/80 space-y-2 text-center">
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-zinc-800/70" />
+            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+              Or Explore Without Signing In
+            </span>
+            <div className="h-px flex-1 bg-zinc-800/70" />
+          </div>
+
+          <button
+            type="button"
+            onClick={continueAsGuest}
+            className="w-full py-2.5 px-3 bg-zinc-950 hover:bg-zinc-800/90 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-sm group"
+          >
+            <Eye className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span>Continue as Guest / Spectator</span>
+          </button>
+          <p className="text-[11px] text-zinc-400 leading-tight px-1">
+            Browse match history, interactive tactical boards, player profiles & live MOTM leaderboards.
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -22,8 +22,12 @@ import {
   syncMatchToFirestore,
   deleteMatchFromFirestore,
   syncRatingLogToFirestore,
+  syncRatingLogsBatchToFirestore,
   deleteRatingLogFromFirestore,
+  addMatchCommentToFirestore,
+  syncMatchCalculatedStatsToFirestore,
 } from '../lib/firestoreService';
+import { calculateFairPlayRatings } from '../lib/ratingAlgorithms';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -33,6 +37,7 @@ interface AppContextType {
   ratingLogs: RatingLog[];
   currentUser: Player | null;
   isAdmin: boolean;
+  isGuest: boolean;
   activeTab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players';
   selectedMatchId: string | null;
   selectedPlayerId: string | null;
@@ -41,6 +46,7 @@ interface AppContextType {
   
   // Actions
   setCurrentUser: (player: Player | null) => void;
+  continueAsGuest: () => void;
   logout: () => Promise<void>;
   setIsAdmin: (isAdmin: boolean) => void;
   setActiveTab: (tab: 'matches' | 'pitch' | 'ratings' | 'stats' | 'logs' | 'players') => void;
@@ -71,7 +77,8 @@ interface AppContextType {
   startRatingWindow: (matchId: string) => void;
   stopRatingWindow: (matchId: string) => void;
   resumeRatingWindow: (matchId: string) => void;
-  submitMatchRatings: (matchId: string, ratings: { ratedPlayerId: string; rating: number; comment?: string }[], mvpVotePlayerId?: string) => void;
+  toggleNeutralizeRatings: (matchId: string) => void;
+  submitMatchRatings: (matchId: string, ratings: { ratedPlayerId: string; rating: number; comment?: string }[], mvpVotePlayerId?: string) => Promise<boolean>;
   deleteRatingLog: (logId: string) => void;
   
   // Stats helpers
@@ -231,7 +238,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // Recalculate match statistics dynamically based on ratingLogs and goal events
+  // Recalculate match statistics dynamically based on ratingLogs and peer MOTM votes
+  // By default: Uses exact pure arithmetic average (raw ratings).
+  // When match.isNeutralized === true: Applies FairPlay outlier neutralization algorithm.
+  // G & A (Goal contributions) are NEVER used in player ratings or MVP calculations.
   const computeMatchStats = (match: Match, logs: RatingLog[]): { calculatedStats: Record<string, PlayerMatchComputedStats>; computedMvpId?: string; computedMvpScore?: number } => {
     const matchLogs = logs.filter(l => l.matchId === match.id);
     const calculatedStats: Record<string, PlayerMatchComputedStats> = {};
@@ -240,6 +250,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...match.teamA.lineup.map(spot => ({ ...spot, team: 'teamA' as const })),
       ...match.teamB.lineup.map(spot => ({ ...spot, team: 'teamB' as const })),
     ];
+
+    // Compute FairPlay bias mitigation analysis
+    const fairPlayAnalysis = calculateFairPlayRatings(match, matchLogs);
 
     // Total distinct voters who voted MVP in this match
     const distinctMvpVoters = new Set<string>();
@@ -252,19 +265,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    const isNeutralized = match.isNeutralized === true;
+
     allMatchSpots.forEach(spot => {
+      const fpResult = fairPlayAnalysis.playerRatings[spot.playerId];
       const playerLogs = matchLogs.filter(l => l.ratedPlayerId === spot.playerId);
       const ratingCount = playerLogs.length;
-      const sumRatings = playerLogs.reduce((acc, curr) => acc + curr.rating, 0);
-      const avgRating = ratingCount > 0 ? Number((sumRatings / ratingCount).toFixed(1)) : 0;
+      const rawSum = playerLogs.reduce((acc, curr) => acc + curr.rating, 0);
+      const rawAvg = ratingCount > 0 ? Number((rawSum / ratingCount).toFixed(1)) : 0;
+      const fairPlayAvg = fpResult ? fpResult.fairPlayAvg : rawAvg;
+
+      // Active rating is raw arithmetic mean by default, or fairPlayAvg ONLY when Neutralize Rating is enabled
+      const activeAvg = isNeutralized ? fairPlayAvg : rawAvg;
 
       const goals = match.goals.filter(g => g.scorerId === spot.playerId).length;
       const assists = match.goals.filter(g => g.assisterId === spot.playerId).length;
       const mvpVotesCount = mvpVotesByPlayer[spot.playerId] || 0;
 
       calculatedStats[spot.playerId] = {
-        avgRating,
+        avgRating: activeAvg,
+        rawRating: rawAvg,
+        fairPlayRating: fairPlayAvg,
         ratingCount,
+        outlierCount: isNeutralized && fpResult ? fpResult.outlierCount : 0,
+        confidenceScore: fpResult ? fpResult.confidenceScore : 0,
         mvpVotesCount,
         goals,
         assists,
@@ -274,7 +298,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // MVP Computation: Strictly NOT considering G & A as mandated:
-    // "MVP will be selected after the ratting periods off... while giving the rattings ask for mvp according to that user and accordingly that voting and rattings give MVP when admin ends the window do not consider G and A for MVP calculations"
+    // Purely based on Peer Rating (70%) + Peer MVP Ballot Votes (30%)
     let highestMvpIndex = -1;
     let computedMvpId: string | undefined = undefined;
     let computedMvpScore: number | undefined = undefined;
@@ -283,7 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const pStats = calculatedStats[spot.playerId];
       if (!pStats) return;
 
-      const avgR = pStats.avgRating; // 0 to 10
+      const avgR = pStats.avgRating; // 0 to 10 scale
       const totalMvpVotersCount = Math.max(distinctMvpVoters.size, 1);
       const mvpVoteRatio = pStats.mvpVotesCount / totalMvpVotersCount; // 0 to 1
       const mvpVoteScore = mvpVoteRatio * 10; // scaled 0 to 10
@@ -613,28 +637,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addMatchComment = (matchId: string, content: string) => {
-    if (!currentUser) return;
+  const addMatchComment = async (matchId: string, content: string) => {
+    if (!currentUser || currentUser.isGuest) return;
+    const newComment = {
+      id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      authorId: currentUser.uid || currentUser.id,
+      authorName: currentUser.name,
+      authorPhoto: currentUser.photo,
+      content,
+      createdAt: new Date().toISOString()
+    };
+
     setMatches(prev => {
       const updated = prev.map(m => {
         if (m.id !== matchId) return m;
-        const newComment = {
-          id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          authorId: currentUser.id,
-          authorName: currentUser.name,
-          authorPhoto: currentUser.photo,
-          content,
-          createdAt: new Date().toISOString()
-        };
         return {
           ...m,
           comments: [...(m.comments || []), newComment]
         };
       });
-      const target = updated.find(m => m.id === matchId);
-      if (target) syncMatchToFirestore(target);
       return updated;
     });
+
+    // Write to scalable subcollection: matches/{matchId}/comments/{commentId}
+    await addMatchCommentToFirestore(matchId, newComment);
   };
 
   // Rating window workflows
@@ -701,19 +727,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Submit match ratings
-  const submitMatchRatings = (
+  const toggleNeutralizeRatings = (matchId: string) => {
+    setMatches(prev => {
+      const updated = prev.map(m => {
+        if (m.id !== matchId) return m;
+        const newNeutralizedState = !m.isNeutralized;
+        const updatedMatch: Match = {
+          ...m,
+          isNeutralized: newNeutralizedState,
+        };
+        const { calculatedStats, computedMvpId, computedMvpScore } = computeMatchStats(updatedMatch, ratingLogs);
+        return {
+          ...updatedMatch,
+          calculatedStats,
+          mvpPlayerId: computedMvpId,
+          mvpScore: computedMvpScore,
+        };
+      });
+      const target = updated.find(m => m.id === matchId);
+      if (target) syncMatchToFirestore(target);
+      return updated;
+    });
+  };
+
+  // Submit match ratings with atomic batch sync and deduplication
+  const submitMatchRatings = async (
     matchId: string,
     ratings: { ratedPlayerId: string; rating: number; comment?: string }[],
     mvpVotePlayerId?: string
-  ) => {
-    if (!currentUser) return;
+  ): Promise<boolean> => {
+    if (!currentUser || currentUser.isGuest) return false;
     
     // Check if user already voted in this match
     const alreadyVoted = ratingLogs.some(l => l.matchId === matchId && l.voterId === currentUser.id);
     if (alreadyVoted) {
       console.warn("User has already voted for this match.");
-      return;
+      return false;
     }
 
     const newLogs: RatingLog[] = [];
@@ -724,8 +773,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (r.ratedPlayerId === currentUser.id) return;
 
       const ratedP = players.find(p => p.id === r.ratedPlayerId);
+      const logId = `log_${matchId}_${currentUser.id}_${r.ratedPlayerId}`;
       const newLog: RatingLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        id: logId,
         matchId,
         voterId: currentUser.id,
         voterName: currentUser.name,
@@ -737,10 +787,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: timestamp,
       };
       newLogs.push(newLog);
-      syncRatingLogToFirestore(newLog);
     });
 
-    setRatingLogs(prev => [...prev, ...newLogs]);
+    if (newLogs.length === 0) return true;
+
+    // Instantly update local state and localStorage cache so refresh or offline state stays consistent
+    setRatingLogs(prev => {
+      const newLogIds = new Set(newLogs.map(l => l.id));
+      const filtered = prev.filter(l => !newLogIds.has(l.id));
+      const merged = [...filtered, ...newLogs];
+      try {
+        localStorage.setItem(LOCAL_STORAGE_LOGS, JSON.stringify(merged));
+      } catch (e) {
+        console.warn('LocalStorage rating log cache notice:', e);
+      }
+      return merged;
+    });
+
+    // Commit atomic batch to Firestore with deterministic keys
+    const batchSuccess = await syncRatingLogsBatchToFirestore(newLogs);
+
+    // Automatically compute and sync pre-computed match stats summary to matches/{matchId}
+    const currentMatch = matches.find(m => m.id === matchId);
+    if (currentMatch) {
+      const allMergedLogs = [...ratingLogs.filter(l => !newLogs.some(nl => nl.id === l.id)), ...newLogs];
+      const { calculatedStats, computedMvpId, computedMvpScore } = computeMatchStats(currentMatch, allMergedLogs);
+      syncMatchCalculatedStatsToFirestore(matchId, calculatedStats, computedMvpId, computedMvpScore);
+    }
 
     try {
       confetti({
@@ -751,12 +824,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // confetti
     }
+
+    return batchSuccess;
   };
 
   // Delete a specific rating log entry (Admin power with real-time recalculation)
   const deleteRatingLog = (logId: string) => {
     setRatingLogs(prev => prev.filter(l => l.id !== logId));
     deleteRatingLogFromFirestore(logId);
+  };
+
+  const isGuest = currentUser?.isGuest === true || currentUser?.id === 'guest_user';
+
+  const continueAsGuest = () => {
+    const guestUser: Player = {
+      id: 'guest_user',
+      name: 'Guest Viewer',
+      email: '',
+      role: 'guest',
+      isGuest: true,
+      photo: '',
+      primaryPosition: 'CM',
+      secondaryPositions: [],
+      traits: [],
+      createdAt: new Date().toISOString(),
+    };
+    setCurrentUser(guestUser);
+    setIsAdmin(false);
   };
 
   const activeRatingMatches = useMemo(() => {
@@ -774,6 +868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Signout warning:', e);
     }
     setCurrentUser(null);
+    setIsAdmin(false);
     try {
       localStorage.removeItem(LOCAL_STORAGE_USER);
     } catch {}
@@ -781,7 +876,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setCurrentUserHandler = (user: Player | null) => {
     setCurrentUser(user);
-    if (user) {
+    if (user && !user.isGuest) {
       if (user.email?.toLowerCase() === 'vatsv3temp@gmail.com' || user.isAdmin === true) {
         setIsAdmin(true);
       } else {
@@ -800,6 +895,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ratingLogs,
         currentUser,
         isAdmin,
+        isGuest,
         activeTab,
         selectedMatchId,
         selectedPlayerId,
@@ -807,6 +903,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         timeFilter,
 
         setCurrentUser: setCurrentUserHandler,
+        continueAsGuest,
         logout,
         setIsAdmin,
         setActiveTab,
@@ -833,6 +930,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startRatingWindow,
         stopRatingWindow,
         resumeRatingWindow,
+        toggleNeutralizeRatings,
         submitMatchRatings,
         deleteRatingLog,
 

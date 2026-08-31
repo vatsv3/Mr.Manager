@@ -6,14 +6,17 @@ import {
   onSnapshot,
   writeBatch,
   getDocs,
+  query,
+  orderBy,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Player, Match, RatingLog } from '../types';
+import { Player, Match, RatingLog, MatchComment, PlayerMatchComputedStats } from '../types';
 import { INITIAL_PLAYERS } from '../data/mockData';
 
 const PLAYERS_COL = 'players';
 const MATCHES_COL = 'matches';
 const RATING_LOGS_COL = 'ratingLogs';
+const COMMENTS_SUBCOL = 'comments';
 
 /**
  * Deeply strips undefined properties from an object so Firestore setDoc does not reject with:
@@ -236,12 +239,48 @@ export async function deleteMatchFromFirestore(matchId: string) {
   }
 }
 
-export async function syncRatingLogToFirestore(log: RatingLog) {
+export async function syncRatingLogToFirestore(log: RatingLog): Promise<boolean> {
   try {
     const cleaned = sanitizeForFirestore(log);
     await setDoc(doc(db, RATING_LOGS_COL, log.id), cleaned, { merge: true });
+    console.log(`[Firestore] Successfully saved rating log (${log.id})`);
+    return true;
   } catch (err) {
     console.error('Failed to sync rating log to Firestore:', err);
+    return false;
+  }
+}
+
+/**
+ * Atomic batch synchronization of rating logs to Firestore.
+ * Saves an entire voting ballot in a single atomic network commit.
+ */
+export async function syncRatingLogsBatchToFirestore(logs: RatingLog[]): Promise<boolean> {
+  if (!logs || logs.length === 0) return true;
+  try {
+    const batch = writeBatch(db);
+    logs.forEach(log => {
+      const cleaned = sanitizeForFirestore(log);
+      const docRef = doc(db, RATING_LOGS_COL, log.id);
+      batch.set(docRef, cleaned, { merge: true });
+    });
+    await batch.commit();
+    console.log(`[Firestore] Successfully batch committed ${logs.length} rating logs.`);
+    return true;
+  } catch (err) {
+    console.error('Failed to batch sync rating logs to Firestore, attempting fallback:', err);
+    try {
+      await Promise.all(
+        logs.map(log =>
+          setDoc(doc(db, RATING_LOGS_COL, log.id), sanitizeForFirestore(log), { merge: true })
+        )
+      );
+      console.log(`[Firestore] Fallback individual sync succeeded for ${logs.length} logs.`);
+      return true;
+    } catch (fallbackErr) {
+      console.error('All rating log sync attempts failed:', fallbackErr);
+      return false;
+    }
   }
 }
 
@@ -252,5 +291,93 @@ export async function deleteRatingLogFromFirestore(logId: string) {
     console.error('Failed to delete rating log from Firestore:', err);
   }
 }
+
+/**
+ * Match Comments Subcollection (matches/{matchId}/comments/{commentId})
+ * Scales seamlessly without hitting 1MB document size limit.
+ */
+export function subscribeToMatchComments(
+  matchId: string,
+  callback: (comments: MatchComment[]) => void
+) {
+  try {
+    const commentsRef = collection(db, MATCHES_COL, matchId, COMMENTS_SUBCOL);
+    const q = query(commentsRef, orderBy('createdAt', 'asc'));
+
+    return onSnapshot(
+      q,
+      snapshot => {
+        const comments: MatchComment[] = [];
+        snapshot.forEach(docSnap => {
+          comments.push(docSnap.data() as MatchComment);
+        });
+        callback(comments);
+      },
+      err => {
+        const msg = err?.message || String(err);
+        if (!msg.includes('unavailable') && !msg.includes('offline')) {
+          console.warn(`[Firestore] Comments listener for ${matchId} notice:`, msg);
+        }
+      }
+    );
+  } catch (err) {
+    console.warn(`Could not register comments listener for ${matchId}:`, err);
+    return () => {};
+  }
+}
+
+export async function addMatchCommentToFirestore(
+  matchId: string,
+  comment: MatchComment
+): Promise<boolean> {
+  try {
+    const commentRef = doc(db, MATCHES_COL, matchId, COMMENTS_SUBCOL, comment.id);
+    const cleaned = sanitizeForFirestore(comment);
+    await setDoc(commentRef, cleaned, { merge: true });
+    return true;
+  } catch (err) {
+    console.error(`Failed to add comment to match ${matchId}:`, err);
+    return false;
+  }
+}
+
+export async function deleteMatchCommentFromFirestore(
+  matchId: string,
+  commentId: string
+): Promise<boolean> {
+  try {
+    const commentRef = doc(db, MATCHES_COL, matchId, COMMENTS_SUBCOL, commentId);
+    await deleteDoc(commentRef);
+    return true;
+  } catch (err) {
+    console.error(`Failed to delete comment ${commentId} from match ${matchId}:`, err);
+    return false;
+  }
+}
+
+/**
+ * Pre-computed Match Performance Summaries Sync
+ * Persists calculatedStats, mvpPlayerId, and mvpScore directly on the match document.
+ */
+export async function syncMatchCalculatedStatsToFirestore(
+  matchId: string,
+  calculatedStats: Record<string, PlayerMatchComputedStats>,
+  mvpPlayerId?: string,
+  mvpScore?: number
+) {
+  try {
+    const matchRef = doc(db, MATCHES_COL, matchId);
+    const payload: Record<string, any> = {
+      calculatedStats: sanitizeForFirestore(calculatedStats),
+    };
+    if (mvpPlayerId !== undefined) payload.mvpPlayerId = mvpPlayerId;
+    if (mvpScore !== undefined) payload.mvpScore = mvpScore;
+
+    await setDoc(matchRef, payload, { merge: true });
+  } catch (err) {
+    console.error(`Failed to persist pre-computed stats for match ${matchId}:`, err);
+  }
+}
+
 
 
