@@ -20,6 +20,11 @@ import {
   ShieldCheck,
   Sparkles,
   Info,
+  ArrowRight,
+  CheckCircle2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
 
 interface MatchDetailsModalProps {
@@ -56,8 +61,76 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
   const [scorerId, setScorerId] = useState<string>('');
   const [assisterId, setAssisterId] = useState<string>('');
 
+  // Neutralizing / Reverting animation state & comparison details
+  const [isProcessingRatings, setIsProcessingRatings] = useState(false);
+  const [processingAction, setProcessingAction] = useState<'neutralizing' | 'reverting'>('neutralizing');
+  const [neutralizeProgress, setNeutralizeProgress] = useState(0);
+  const [showChangesReport, setShowChangesReport] = useState(false);
+
   const { calculatedStats, computedMvpId } = computeMatchStats(match);
   const mvpPlayer = players.find(p => p.id === (computedMvpId || match.mvpPlayerId));
+
+  // Compute FairPlay analysis comparison report
+  const fairPlayAnalysis = useMemo(() => {
+    return calculateFairPlayRatings(match, ratingLogs);
+  }, [match, ratingLogs]);
+
+  // Extract changed player ratings when algorithm runs
+  const ratingChanges = useMemo(() => {
+    const allSpots = [...match.teamA.lineup, ...match.teamB.lineup];
+    return allSpots.map(spot => {
+      const p = players.find(pl => pl.id === spot.playerId);
+      const fpResult = fairPlayAnalysis.playerRatings[spot.playerId];
+      const rawAvg = fpResult ? fpResult.rawAvg : 0;
+      const fairPlayAvg = fpResult ? fpResult.fairPlayAvg : 0;
+      const delta = Number((fairPlayAvg - rawAvg).toFixed(1));
+      const outlierCount = fpResult ? fpResult.outlierCount : 0;
+      const ratingCount = fpResult ? fpResult.ratingCount : 0;
+
+      return {
+        playerId: spot.playerId,
+        playerName: p?.name || spot.playerName || 'Player',
+        playerPhoto: p?.photo,
+        position: spot.position,
+        rawAvg,
+        fairPlayAvg,
+        delta,
+        outlierCount,
+        ratingCount,
+      };
+    }).filter(item => item.ratingCount > 0);
+  }, [match, players, fairPlayAnalysis]);
+
+  const handleNeutralizeClick = () => {
+    const isReverting = match.isNeutralized;
+    setProcessingAction(isReverting ? 'reverting' : 'neutralizing');
+    setIsProcessingRatings(true);
+    setNeutralizeProgress(0);
+
+    const interval = setInterval(() => {
+      setNeutralizeProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(interval);
+          return 90;
+        }
+        return prev + 18;
+      });
+    }, 70);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      setNeutralizeProgress(100);
+      toggleNeutralizeRatings(match.id);
+      setTimeout(() => {
+        setIsProcessingRatings(false);
+        if (isReverting) {
+          setShowChangesReport(false);
+        } else {
+          setShowChangesReport(true);
+        }
+      }, 200);
+    }, 550);
+  };
 
   const teamAPlayers = match.teamA.lineup
     .map(s => players.find(p => p.id === s.playerId))
@@ -565,7 +638,7 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
 
         {/* Neutralize Ratings Admin Control & Status Banner */}
         {ratingLogs.filter(l => l.matchId === match.id).length >= 1 && (
-          <div className={`p-3.5 rounded-xl border transition-all ${
+          <div className={`p-3.5 rounded-xl border transition-all space-y-3 ${
             match.isNeutralized
               ? 'bg-emerald-950/25 border-emerald-500/40'
               : 'bg-zinc-900/60 border-zinc-800/80'
@@ -574,13 +647,18 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
               <div className="flex items-center space-x-2">
                 <ShieldCheck className={`w-4 h-4 ${match.isNeutralized ? 'text-emerald-400' : 'text-zinc-500'}`} />
                 <div>
-                  <span className="text-xs font-semibold text-zinc-200">
+                  <span className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
                     {match.isNeutralized ? 'Ratings Neutralized (FairPlay Active)' : 'Standard Arithmetic Average'}
+                    {match.isNeutralized && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-mono bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
+                        {fairPlayAnalysis.outliersMitigated > 0 ? `${fairPlayAnalysis.outliersMitigated} Outliers Fixed` : 'Fair & Calibrated'}
+                      </span>
+                    )}
                   </span>
                   <p className="text-[10px] text-zinc-400 mt-0.5">
                     {match.isNeutralized
-                      ? 'Outliers, spite downvotes, and extreme voter biases are mitigated.'
-                      : 'Raw arithmetic average is currently active. Goal contributions are excluded.'}
+                      ? 'Tukey MAD consensus & isolated voter bias calibration applied.'
+                      : 'Raw arithmetic mean active. Goal contributions strictly excluded.'}
                   </p>
                 </div>
               </div>
@@ -588,18 +666,126 @@ export const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({
               {isAdmin && (
                 <button
                   type="button"
-                  onClick={() => toggleNeutralizeRatings(match.id)}
+                  disabled={isProcessingRatings}
+                  onClick={handleNeutralizeClick}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition shrink-0 flex items-center gap-1.5 ${
-                    match.isNeutralized
+                    isProcessingRatings
+                      ? processingAction === 'neutralizing'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 cursor-wait'
+                        : 'bg-zinc-800/80 text-zinc-300 border-zinc-700 cursor-wait'
+                      : match.isNeutralized
                       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
                       : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700 hover:text-white'
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{match.isNeutralized ? 'Revert to Raw' : 'Neutralize Rating'}</span>
+                  <Sparkles className={`w-3.5 h-3.5 ${isProcessingRatings ? 'animate-spin' : ''}`} />
+                  <span>
+                    {isProcessingRatings
+                      ? processingAction === 'neutralizing'
+                        ? 'Calculating...'
+                        : 'Reverting...'
+                      : match.isNeutralized
+                      ? 'Revert to Raw'
+                      : 'Neutralize Rating'}
+                  </span>
                 </button>
               )}
             </div>
+
+            {/* Animated Loading Bar when executing or reverting algorithm */}
+            {isProcessingRatings && (
+              <div className="space-y-1.5 pt-1">
+                <div className={`flex justify-between text-[10px] font-mono ${
+                  processingAction === 'neutralizing' ? 'text-emerald-400' : 'text-zinc-400'
+                }`}>
+                  <span>
+                    {processingAction === 'neutralizing'
+                      ? 'Analyzing voter deviations & MAD spread...'
+                      : 'Restoring raw arithmetic voter ballots...'}
+                  </span>
+                  <span>{neutralizeProgress}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-150 ease-out ${
+                      processingAction === 'neutralizing'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                        : 'bg-gradient-to-r from-zinc-500 to-zinc-300'
+                    }`}
+                    style={{ width: `${neutralizeProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* What Rating Changed Breakdown Report */}
+            {match.isNeutralized && !isProcessingRatings && ratingChanges.length > 0 && (
+              <div className="pt-2 border-t border-emerald-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    Rating Adjustments Summary:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowChangesReport(!showChangesReport)}
+                    className="text-[10px] text-zinc-400 hover:text-zinc-200 underline font-mono"
+                  >
+                    {showChangesReport ? 'Hide details' : 'Show breakdown'}
+                  </button>
+                </div>
+
+                {showChangesReport && (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {ratingChanges.map(rc => {
+                      const isChanged = Math.abs(rc.delta) > 0.05;
+                      return (
+                        <div
+                          key={rc.playerId}
+                          className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/60 text-xs"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <PlayerAvatar
+                              player={{ id: rc.playerId, name: rc.playerName, photo: rc.playerPhoto, position: rc.position } as any}
+                              size="sm"
+                            />
+                            <div>
+                              <span className="font-medium text-zinc-200">{rc.playerName}</span>
+                              <span className="text-[10px] text-zinc-500 ml-1.5 font-mono">
+                                ({rc.ratingCount} vote{rc.ratingCount !== 1 ? 's' : ''})
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2 font-mono text-xs">
+                            <span className="text-zinc-500 line-through">{rc.rawAvg.toFixed(1)}</span>
+                            <ArrowRight className="w-3 h-3 text-zinc-600" />
+                            <span className={`font-semibold ${getRatingBadgeStyle(rc.fairPlayAvg)} px-1.5 py-0.5 rounded text-[11px]`}>
+                              {rc.fairPlayAvg.toFixed(1)}
+                            </span>
+                            {isChanged ? (
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                  rc.delta > 0
+                                    ? 'text-emerald-400 bg-emerald-500/10'
+                                    : 'text-rose-400 bg-rose-500/10'
+                                }`}
+                              >
+                                {rc.delta > 0 ? `+${rc.delta}` : rc.delta}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-zinc-500 px-1">
+                                0.0
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
