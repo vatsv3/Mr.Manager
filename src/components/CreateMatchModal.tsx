@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { MatchFormat, FootballPosition, Player, PlayerAggregatedStats } from '../types';
+import { MatchFormat, FootballPosition, Player, PlayerAggregatedStats, PlayerTacticalSpot } from '../types';
 import { FORMATION_PRESETS, POSITION_INFO } from '../data/constants';
 import { PlayerAvatar } from './PlayerAvatar';
 import { X, Users, Shuffle, RotateCcw, Check, Sparkles, Scale, Award, Info, CheckSquare, Square } from 'lucide-react';
@@ -134,16 +134,22 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
   const makeBalancedTeams = () => {
     // 1. Determine candidate players to draft from
     let pool: Player[] = [];
-    if (selectedPoolIds.length >= 2) {
-      pool = players.filter(p => selectedPoolIds.includes(p.id));
-    } else {
-      // If no pool checked, use all currently active players
-      pool = [...players];
-    }
+    let targetA: number;
+    let targetB: number;
 
-    // If pool is larger than needed, take top/selected up to totalPlayersNeeded
-    if (pool.length > totalPlayersNeeded) {
-      pool = pool.slice(0, totalPlayersNeeded);
+    if (teamAPlayers.length > 0 && teamBPlayers.length > 0) {
+      // Respect the exact count already chosen by the user (e.g. 6v4 or 7v3)
+      pool = [...teamAPlayers, ...teamBPlayers];
+      targetA = teamAPlayers.length;
+      targetB = teamBPlayers.length;
+    } else if (selectedPoolIds.length >= 2) {
+      pool = players.filter(p => selectedPoolIds.includes(p.id));
+      targetA = Math.ceil(pool.length / 2);
+      targetB = Math.floor(pool.length / 2);
+    } else {
+      pool = players.slice(0, totalPlayersNeeded);
+      targetA = neededPerTeam;
+      targetB = neededPerTeam;
     }
 
     // Compute player power scores
@@ -171,15 +177,15 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
         const powerA = teamA.reduce((sum, p) => sum + getPlayerPower(p).compositePower, 0);
         const powerB = teamB.reduce((sum, p) => sum + getPlayerPower(p).compositePower, 0);
 
-        if (teamA.length < neededPerTeam && teamB.length < neededPerTeam) {
+        if (teamA.length < targetA && teamB.length < targetB) {
           if (powerA <= powerB) {
             teamA.push(item.player);
           } else {
             teamB.push(item.player);
           }
-        } else if (teamA.length < neededPerTeam) {
+        } else if (teamA.length < targetA) {
           teamA.push(item.player);
-        } else {
+        } else if (teamB.length < targetB) {
           teamB.push(item.player);
         }
       });
@@ -228,7 +234,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
       }
     }
 
-    // Apply assignments
+    // Apply assignments - STRICTLY only for the drafted pool
     const newAss: Record<string, 'teamA' | 'teamB' | 'none'> = {};
     players.forEach(p => {
       newAss[p.id] = 'none';
@@ -264,9 +270,25 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
   };
 
   const autoDraftSquads = () => {
-    const pool = selectedPoolIds.length >= totalPlayersNeeded
-      ? players.filter(p => selectedPoolIds.includes(p.id))
-      : [...players];
+    let pool: Player[] = [];
+    let targetA: number;
+    let targetB: number;
+
+    if (teamAPlayers.length > 0 && teamBPlayers.length > 0) {
+      // Respect the exact count already chosen by the user (e.g. 6v4 or 7v3)
+      pool = [...teamAPlayers, ...teamBPlayers];
+      targetA = teamAPlayers.length;
+      targetB = teamBPlayers.length;
+    } else if (selectedPoolIds.length >= 2) {
+      pool = players.filter(p => selectedPoolIds.includes(p.id));
+      targetA = Math.ceil(pool.length / 2);
+      targetB = Math.floor(pool.length / 2);
+    } else {
+      pool = players.slice(0, totalPlayersNeeded);
+      targetA = neededPerTeam;
+      targetB = neededPerTeam;
+    }
+
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
     const newAss: Record<string, 'teamA' | 'teamB' | 'none'> = {};
 
@@ -275,9 +297,9 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
     });
 
     shuffled.forEach((p, idx) => {
-      if (idx < neededPerTeam) {
+      if (idx < targetA) {
         newAss[p.id] = 'teamA';
-      } else if (idx < totalPlayersNeeded) {
+      } else if (idx < targetA + targetB) {
         newAss[p.id] = 'teamB';
       }
     });
@@ -295,46 +317,83 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
     setBalanceReport(null);
   };
 
-  // Helper to map squad to formation slots intelligently by position
-  const mapSquadToFormation = (teamSquad: Player[], slots: { positionCode: FootballPosition; x: number; y: number }[]) => {
-    const availablePlayers = [...teamSquad];
-    const lineup: { playerId: string; positionCode: FootballPosition; x: number; y: number }[] = [];
+  // Helper to map squad to formation slots intelligently by position without adding or removing ANY player
+  const buildLineupFromSquad = (
+    teamSquad: Player[],
+    teamSide: 'teamA' | 'teamB',
+    presetSlots: { positionCode: FootballPosition; x: number; y: number }[] = []
+  ): PlayerTacticalSpot[] => {
+    if (teamSquad.length === 0) return [];
 
-    slots.forEach(slot => {
-      const slotRole = getRoleCategory(slot.positionCode);
-      
+    const availableSlots = [...presetSlots];
+    const lineup: PlayerTacticalSpot[] = [];
+
+    // Sort squad so GKs, DEFs, MIDs, FWDs get preferred slot assignment order
+    const roleOrder: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
+    const sortedSquad = [...teamSquad].sort((a, b) => {
+      const orderA = roleOrder[getRoleCategory(a.primaryPosition)] ?? 2;
+      const orderB = roleOrder[getRoleCategory(b.primaryPosition)] ?? 2;
+      return orderA - orderB;
+    });
+
+    sortedSquad.forEach((player, playerIndex) => {
+      const playerRole = getRoleCategory(player.primaryPosition);
+      let slotIdx = -1;
+
       // 1. Exact primary position match
-      let matchIdx = availablePlayers.findIndex(p => p.primaryPosition === slot.positionCode);
-      
+      slotIdx = availableSlots.findIndex(s => s.positionCode === player.primaryPosition);
+
       // 2. Same role category match (e.g. DEF for CB/LB)
-      if (matchIdx === -1) {
-        matchIdx = availablePlayers.findIndex(p => getRoleCategory(p.primaryPosition) === slotRole);
+      if (slotIdx === -1) {
+        slotIdx = availableSlots.findIndex(s => getRoleCategory(s.positionCode) === playerRole);
       }
 
       // 3. Secondary position match
-      if (matchIdx === -1) {
-        matchIdx = availablePlayers.findIndex(p => canPlayRole(p, slotRole));
+      if (slotIdx === -1) {
+        slotIdx = availableSlots.findIndex(s => canPlayRole(player, getRoleCategory(s.positionCode)));
       }
 
-      // 4. Fallback: first available
-      if (matchIdx === -1 && availablePlayers.length > 0) {
-        matchIdx = 0;
+      // 4. Any remaining preset slot
+      if (slotIdx === -1 && availableSlots.length > 0) {
+        slotIdx = 0;
       }
 
-      if (matchIdx !== -1) {
-        const chosen = availablePlayers.splice(matchIdx, 1)[0];
+      if (slotIdx !== -1) {
+        const chosenSlot = availableSlots.splice(slotIdx, 1)[0];
         lineup.push({
-          playerId: chosen.id,
-          positionCode: slot.positionCode,
-          x: slot.x,
-          y: slot.y,
+          playerId: player.id,
+          positionCode: player.primaryPosition || chosenSlot.positionCode,
+          x: chosenSlot.x,
+          y: chosenSlot.y,
         });
       } else {
+        // If there are more players than preset slots, assign clean coordinates on the tactical pitch
+        const isTeamA = teamSide === 'teamA';
+        let x = 50;
+        let y = isTeamA ? 70 : 30;
+
+        if (playerRole === 'GK') {
+          x = 50;
+          y = isTeamA ? 92 : 8;
+        } else if (playerRole === 'DEF') {
+          const offset = (playerIndex * 22) % 65;
+          x = 20 + offset;
+          y = isTeamA ? 77 : 23;
+        } else if (playerRole === 'MID') {
+          const offset = (playerIndex * 20) % 65;
+          x = 20 + offset;
+          y = isTeamA ? 64 : 36;
+        } else {
+          const offset = (playerIndex * 25) % 60;
+          x = 25 + offset;
+          y = isTeamA ? 52 : 48;
+        }
+
         lineup.push({
-          playerId: players[0]?.id || 'p1',
-          positionCode: slot.positionCode,
-          x: slot.x,
-          y: slot.y,
+          playerId: player.id,
+          positionCode: player.primaryPosition,
+          x,
+          y,
         });
       }
     });
@@ -345,16 +404,23 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const preset = FORMATION_PRESETS[format]?.[0];
-    const lineupA = mapSquadToFormation(teamAPlayers, preset ? preset.teamA : []);
-    const lineupB = mapSquadToFormation(teamBPlayers, preset ? preset.teamB : []);
+    if (teamAPlayers.length === 0 || teamBPlayers.length === 0) {
+      alert('Please assign at least one player to both Team 1 and Team 2.');
+      return;
+    }
+
+    const preset = FORMATION_PRESETS[format]?.[0] || FORMATION_PRESETS['7v7']?.[0];
+    const lineupA = buildLineupFromSquad(teamAPlayers, 'teamA', preset ? preset.teamA : []);
+    const lineupB = buildLineupFromSquad(teamBPlayers, 'teamB', preset ? preset.teamB : []);
+
+    const matchFormat: MatchFormat = `${teamAPlayers.length}v${teamBPlayers.length}`;
 
     createMatch({
       title: title.trim() || 'Friendly Turf Match',
       date,
       time: '',
       venue: '',
-      format,
+      format: matchFormat,
       scoreA: 0,
       scoreB: 0,
       teamA: {
@@ -505,10 +571,10 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: teamAKit }} />
                       <span className="font-semibold text-zinc-200 truncate">{teamAName}</span>
                     </div>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                      teamAPlayers.length === neededPerTeam ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      teamAPlayers.length > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
                     }`}>
-                      {teamAPlayers.length}/{neededPerTeam}
+                      {teamAPlayers.length} {teamAPlayers.length === 1 ? 'player' : 'players'}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1 pt-1 min-h-[30px]">
@@ -546,10 +612,10 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: teamBKit }} />
                       <span className="font-semibold text-zinc-200 truncate">{teamBName}</span>
                     </div>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                      teamBPlayers.length === neededPerTeam ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      teamBPlayers.length > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
                     }`}>
-                      {teamBPlayers.length}/{neededPerTeam}
+                      {teamBPlayers.length} {teamBPlayers.length === 1 ? 'player' : 'players'}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1 pt-1 min-h-[30px]">
@@ -580,10 +646,10 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({ onClose }) =
 
               {/* Pool Selection Strip & Utilities */}
               <div className="flex items-center justify-between gap-2 pt-1">
-                <div className="flex items-center space-x-1 text-[11px] text-zinc-400">
-                  <span>Selected Pool:</span>
-                  <strong className="text-zinc-200">{selectedPoolIds.length}</strong>
-                  <span>/ {totalPlayersNeeded} needed</span>
+                <div className="flex items-center space-x-1.5 text-[11px] text-zinc-400">
+                  <span>Squads:</span>
+                  <strong className="text-emerald-400 font-mono">{teamAPlayers.length}v{teamBPlayers.length}</strong>
+                  <span className="text-zinc-500">({teamAPlayers.length + teamBPlayers.length} players)</span>
                 </div>
 
                 <div className="flex items-center space-x-1.5">

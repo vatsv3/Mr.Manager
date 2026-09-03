@@ -52,7 +52,7 @@ export interface Player {
   createdAt: string;
 }
 
-export type MatchFormat = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '11v11';
+export type MatchFormat = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '11v11' | (string & {});
 
 export type MatchStatus = 'UPCOMING' | 'LIVE' | 'RATING_OPEN' | 'RATING_CLOSED';
 

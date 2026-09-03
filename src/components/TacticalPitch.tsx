@@ -83,31 +83,31 @@ export const TacticalPitch: React.FC = () => {
   const allAssignedIds = [...teamAPlayerIds, ...teamBPlayerIds];
   const benchPlayers = players.filter(p => !allAssignedIds.includes(p.id));
 
-  // Formation Presets
+  // Formation Presets - adjust coordinates of existing players without adding/removing any players
   const handleApplyFormation = (presetName: string) => {
-    const presets = FORMATION_PRESETS[activeMatch.format] || [];
+    const presets = FORMATION_PRESETS[activeMatch.format] || FORMATION_PRESETS['7v7'] || [];
     const preset = presets.find(p => p.name === presetName);
     if (!preset) return;
 
     const currentA = [...activeMatch.teamA.lineup];
-    const newALineup = preset.teamA.map((spot, idx) => {
-      const existing = currentA[idx];
+    const newALineup = currentA.map((existing, idx) => {
+      const presetSpot = preset.teamA[idx];
       return {
-        playerId: existing ? existing.playerId : players[idx % players.length]?.id || 'p1',
-        positionCode: spot.positionCode,
-        x: spot.x,
-        y: spot.y,
+        ...existing,
+        positionCode: presetSpot ? presetSpot.positionCode : existing.positionCode,
+        x: presetSpot ? presetSpot.x : existing.x,
+        y: presetSpot ? presetSpot.y : existing.y,
       };
     });
 
     const currentB = [...activeMatch.teamB.lineup];
-    const newBLineup = preset.teamB.map((spot, idx) => {
-      const existing = currentB[idx];
+    const newBLineup = currentB.map((existing, idx) => {
+      const presetSpot = preset.teamB[idx];
       return {
-        playerId: existing ? existing.playerId : players[(idx + 6) % players.length]?.id || 'p2',
-        positionCode: spot.positionCode,
-        x: spot.x,
-        y: spot.y,
+        ...existing,
+        positionCode: presetSpot ? presetSpot.positionCode : existing.positionCode,
+        x: presetSpot ? presetSpot.x : existing.x,
+        y: presetSpot ? presetSpot.y : existing.y,
       };
     });
 
@@ -138,7 +138,7 @@ export const TacticalPitch: React.FC = () => {
   };
 
   const formats: MatchFormat[] = ['5v5', '6v6', '7v7', '8v8', '9v9', '11v11'];
-  const currentPresets = FORMATION_PRESETS[activeMatch.format] || [];
+  const currentPresets = FORMATION_PRESETS[activeMatch.format] || FORMATION_PRESETS['7v7'] || [];
 
   // Helper for FotMob rating badge styling
   const getRatingBadgeStyle = (rating: number) => {

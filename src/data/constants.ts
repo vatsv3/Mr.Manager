@@ -54,7 +54,7 @@ export interface FormationPreset {
   teamB: { positionCode: FootballPosition; x: number; y: number }[];
 }
 
-export const FORMATION_PRESETS: Record<MatchFormat, FormationPreset[]> = {
+export const FORMATION_PRESETS: Record<string, FormationPreset[]> = {
   '5v5': [
     {
       name: 'Diamond (1-2-1)',
